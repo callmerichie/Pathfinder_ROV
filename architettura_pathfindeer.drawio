@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0" version="29.1.1">
+  <diagram name="Page-1" id="75e8vcmNHBaa5A9g5ytd">
+    <mxGraphModel dx="946" dy="595" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="VzqzQsZF771EEoClX9Vs-3" edge="1" parent="1" source="VzqzQsZF771EEoClX9Vs-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="VzqzQsZF771EEoClX9Vs-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Raspberry PI" vertex="1">
+          <mxGeometry height="60" width="120" x="120" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Arduino" vertex="1">
+          <mxGeometry height="60" width="120" x="380" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;div&gt;Seriale&lt;/div&gt;" vertex="1">
+          <mxGeometry height="30" width="60" x="280" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-6" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" value="Things to do" vertex="1">
+          <mxGeometry height="120" width="140" x="110" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-7" parent="VzqzQsZF771EEoClX9Vs-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" value="Test Camera" vertex="1">
+          <mxGeometry height="30" width="140" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-8" parent="VzqzQsZF771EEoClX9Vs-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" value="Video Streaming" vertex="1">
+          <mxGeometry height="30" width="140" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-9" parent="VzqzQsZF771EEoClX9Vs-6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;" value="Object Detection" vertex="1">
+          <mxGeometry height="30" width="140" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Array di Oggetti" vertex="1">
+          <mxGeometry height="30" width="100" x="290" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-11" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Picamera2" vertex="1">
+          <mxGeometry height="30" width="60" x="300" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="VPS" vertex="1">
+          <mxGeometry height="60" width="120" x="120" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-17" edge="1" parent="1" source="VzqzQsZF771EEoClX9Vs-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="VzqzQsZF771EEoClX9Vs-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Client" vertex="1">
+          <mxGeometry height="60" width="120" x="380" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-14" edge="1" parent="1" source="VzqzQsZF771EEoClX9Vs-1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="VzqzQsZF771EEoClX9Vs-12" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="400" y="340" as="sourcePoint" />
+            <mxPoint x="450" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Port&amp;nbsp;forwarding del flusso di streaming" vertex="1">
+          <mxGeometry height="30" width="60" x="200" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="VzqzQsZF771EEoClX9Vs-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Inoltro comandi ROV" vertex="1">
+          <mxGeometry height="30" width="60" x="100" y="200" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
