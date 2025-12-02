@@ -6,3 +6,6 @@ Mechanical section: Managed by an Arduino R1. Using two DC motors connected to a
 ‘Smart’ section: A Raspberry Pi 4B will be used, connected via serial to the Arduino board, in order to divide tasks and balance the workload. A camera will be installed to provide video streaming to the user. The Raspberry Pi will run Object Detection models, allowing the user to select a recognized object and have the ROV navigate intelligently and autonomously up to the collision limit of the selected object. The user will therefore have two driving modes: manual mode and autonomous mode based on the chosen object.
 
 Communication: The user will connect remotely and use a web page to send commands to the Raspberry Pi. Since remote access is involved, I plan to use a VPS as a bridge between the user and the Raspberry Pi board.
+
+
+<img width="401" height="251" alt="architettura_pathfindeer drawio" src="https://github.com/user-attachments/assets/e1361ac5-a300-49b7-8b3c-9215857f79a7" />
