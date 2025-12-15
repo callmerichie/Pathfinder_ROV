@@ -17,7 +17,7 @@ Communication: The user will connect remotely and use a web page to send command
 - Arudino:
     1. Testing: 
        - Sensors VL53L0X shares the same bus, that means to give each sensor a unique I²C address in software and use the XSHUT pin on each sensor so you can turn them on one at a time and change their address.
-       - L298N Motor Controller and the motors powered by 4 AA batteries
+       - L298N Motor Controller and the motors powered by 4 AA batteries 1.5V
 - Raspberry PI:
     1. Testing:
        - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
