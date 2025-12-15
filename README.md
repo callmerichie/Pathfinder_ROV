@@ -17,9 +17,15 @@ Communication: The user will connect remotely and use a web page to send command
 - Arudino:
     1. Testing: 
        - Sensors VL53L0X shares the same bus, that means to give each sensor a unique I²C address in software and use the XSHUT pin on each sensor so you can turn them on one at a time and change their address.
+         - schema
        - L298N Motor Controller and the motors powered by 4 AA batteries 1.5V
+         - schema
 - Raspberry PI:
     1. Testing:
        - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
-       - UPS for power supply
+         1. Picamaera2 
+         2. Picamaera2 with Flask for localhost streaming
+       - UPS for power supply with 1 18650 battery
        - Two-way communication PI-Arduino
+         1. find the ttyACM0 port (USB-ARDUINO)
+         2. set the baud rate to 9600 (stty -F /dev/ttyACM0 9600)
