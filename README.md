@@ -20,4 +20,6 @@ Communication: The user will connect remotely and use a web page to send command
        - L298N Motor Controller and the motors powered by 4 AA batteries
 - Raspberry PI:
     1. Testing:
-       - Arducam OV5647 camera module with built in motorized IR-CUT filter attached via CSI.
+       - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
+       - UPS for power supply
+       - Two-way communication PI-Arduino
