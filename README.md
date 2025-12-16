@@ -18,8 +18,10 @@ Communication: The user will connect remotely and use a web page to send command
     1. Testing: 
        - Sensors VL53L0X shares the same bus, that means to give each sensor a unique I²C address in software and use the XSHUT pin on each sensor so you can turn them on one at a time and change their address.
          - schema
-       - L298N Motor Controller and the motors powered by 4 AA batteries 1.5V
-         - schema
+       - L298N Motor Controller and the motors powered by 4 AA batteries 1.2V with a total of 4.8V
+         <img width="2976" height="1658" alt="l298n-arduino_bb" src="https://github.com/user-attachments/assets/8f8e8c80-7f9f-45e8-acd9-b85705d65529" />
+
+         
 - Raspberry PI:
     1. Testing:
        - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
