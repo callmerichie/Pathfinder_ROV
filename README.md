@@ -17,9 +17,12 @@ Communication: The user will connect remotely and use a web page to send command
 - Arudino:
     1. Testing: 
        - Sensors VL53L0X shares the same bus, that means to give each sensor a unique I²C address in software and use the XSHUT pin on each sensor so you can turn them on one at a time and change their address.
-         - schema
+         <img width="2888" height="1782" alt="VL53L0X" src="https://github.com/user-attachments/assets/f90b7cb9-e139-4b68-9030-81707e956dbd" />
        - L298N Motor Controller and the motors powered by 4 AA batteries 1.2V with a total of 4.8V
          <img width="2976" height="1658" alt="l298n-arduino_bb" src="https://github.com/user-attachments/assets/8f8e8c80-7f9f-45e8-acd9-b85705d65529" />
+       - Combination of the two VL53L0X laser-ranging modules with the L298N motor controller
+         <img width="3335" height="2738" alt="VL53L0X-L298N" src="https://github.com/user-attachments/assets/6049aca2-4d41-442f-9342-d74e38c2aa2d" />
+
 
          
 - Raspberry PI:
