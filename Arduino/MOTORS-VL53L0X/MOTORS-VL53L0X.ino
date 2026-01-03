@@ -7,7 +7,7 @@
 #define ENB 10 // Enable pin for Motor B (PWM speed control)
 #define IN3 6  // Input 3 for Motor B (Direction control)
 #define IN4 5  // Input 4 for Motor B (Direction control)
-const unsigned long RUN_TIME = 5000; // 3 seconds
+const unsigned long RUN_TIME = 5000; // 5 seconds
 unsigned long startTime;
 
 // address for the two VL53L0X sensors
