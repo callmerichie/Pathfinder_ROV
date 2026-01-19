@@ -9,6 +9,10 @@ arduino.reset_input_buffer()
 
 commands = ['W','S','D','A']
 
+if (arduino.in_waiting > 0):
+    line = arduino.readline().decode('ASCII').strip()
+    print("Arduino received:" + line)
+
 while True:
     arduino.write(commands[0].encode('ASCII'))
     time.sleep(5)

@@ -138,7 +138,7 @@ void stopVehicle(){
 }
 
 void applyCommand(char command){
-
+  Serial.println("hello");
   switch(command){
     case 'W':
       Serial.println("Ho ricevuto W");
@@ -185,7 +185,7 @@ void setup() {
   Serial.begin(115200);
 
   // wait until serial port opens for native USB devices
-  while (! Serial) { delay(1); }
+  //while (! Serial) { delay(1); }
 
   // Set all motor driver control and xshut-down pins as outputs
   pinMode(SHT_LOX1, OUTPUT);
@@ -215,7 +215,7 @@ void loop(){
  if(Serial.available() > 0){
     char command = Serial.read();
     // command.trim();
-
+    Serial.println(command);
     applyCommand(command);
     read_dual_sensors();
   }

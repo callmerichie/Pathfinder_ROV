@@ -30,6 +30,8 @@ Communication: The user will connect remotely and use a web page to send command
        - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
          1. Picamaera2 
          2. Picamaera2 with Flask for localhost streaming
+       - Testing Object Detection model yolo11n
+         
        - UPS for power supply with 1 18650 battery
        - Two-way communication PI-Arduino
          1. find the ttyACM0 port (USB-ARDUINO)
