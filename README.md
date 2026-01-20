@@ -31,11 +31,11 @@ Communication: The user will connect remotely and use a web page to send command
          1. Picamera2 
          2. Picamera2 with Flask for localhost streaming
        - Testing Streaming while using Object Detection models:
-         1. yolo11n & yolo11n_ncnnn_model ( Ideal for resource-constrained devices like Raspberry Pi and NVIDIA Jetson. NCNN can provide significant performance improvements.
+         a. yolo11n & yolo11n_ncnnn_model ( Ideal for resource-constrained devices like Raspberry Pi and NVIDIA Jetson. NCNN can provide significant performance improvements.
          credits: https://docs.ultralytics.com/integrations/ncnn/#why-export-to-ncnn)
-         <img width="713" height="579" alt="Screenshot 2026-01-19 171321" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" />
-         2. yolov8n & yolov8n_ncnn_model
-         4. yolov5n & yolov5n_ncnn_model
+         <img width="713" height="579" alt="Screenshot 2026-01-19 171321" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" /><br>
+         b. yolov8n & yolov8n_ncnn_model
+         c. yolov5n & yolov5n_ncnn_model
        - Two-way communication PI-Arduino
          1. find the ttyACM0 port (USB-ARDUINO)
          2. set the baud rate to 115200 (stty -F /dev/ttyACM0 115200)
