@@ -15,7 +15,7 @@ picam2.start()
 time.sleep(2)  # Camera warm-up
 
 # Load YOLOv8
-model = YOLO("yolov8n.pt")
+model = YOLO("yolov5nu_ncnn_model")
 
 app = Flask(__name__)
 
