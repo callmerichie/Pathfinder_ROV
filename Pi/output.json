@@ -1,0 +1,18 @@
+{
+    "time": 1769446034.3124452,
+    "fps": 1.9327378619517175,
+    "objects": [
+        {
+            "class_id": 41,
+            "class_name": "cup",
+            "confidence": 0.8017752170562744,
+            "count": 1
+        },
+        {
+            "class_id": 65,
+            "class_name": "remote",
+            "confidence": 0.6779662370681763,
+            "count": 1
+        }
+    ]
+}

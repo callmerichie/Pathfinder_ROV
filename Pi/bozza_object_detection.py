@@ -1,3 +1,5 @@
+#credits https://www.youtube.com/watch?v=XKIm_R_rIeQ&t=531s
+
 import cv2
 from picamera2 import Picamera2
 from ultralytics import YOLO
