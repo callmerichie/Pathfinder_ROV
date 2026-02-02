@@ -1,12 +1,8 @@
-from flask import Flask, Response, render_template
+from flask import Flask, Response, render_template, jsonify
 from picamera2 import Picamera2
 from ultralytics import YOLO
 import cv2
-import json
 import time
-
-
-# log file to keep track for each models performance & let the user see a list of the objects that the camera caputre
 
 
 # Set up the camera with Picamera
@@ -17,11 +13,16 @@ config = picam2.create_video_configuration(
 picam2.preview_configuration.align()
 picam2.configure(config)
 picam2.start()
-time.sleep(2)  # Camera warm-up
+time.sleep(5)  # Camera warm-up
 
 # Load YOLO
 model = YOLO("yolo11n_ncnn_model", task="detect", verbose=True)
 
+#keep track of the object for Flask
+list_objects = {
+    "fps": None,
+    "objects": []
+}
 
 # Flask object
 app = Flask(__name__)
@@ -35,18 +36,18 @@ def generate_frames():
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         # Run YOLO model on the captured frame and store the results
-        results = model(frame, conf=0.5)
+        results = model.track(frame, conf=0.5, persist=True)
 
         # Output the visual detection data, we will draw this on our camera preview window
         annotated_frame = results[0].plot()
 
         # Get inference time
-        inference_time = results[0].speed['inference']
-        fps = 1000 / inference_time  # Convert to milliseconds
+        inference_time = results[0].speed.get("inference", 0)
+        fps = 1000 / inference_time if inference_time > 0 else 0  # Convert to milliseconds
         text = f'FPS: {fps:.1f}'
 
         # objects to json
-        objects_dictionary_to_json(results[0], fps)
+        populate_dictionary_with_objects(results[0], fps)
 
         # Define font and position
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -73,28 +74,30 @@ def generate_frames():
 
 
 # storing the identified objects to a json
-def objects_dictionary_to_json(model_results, fps):
-    # dictionary structure
-    latest_objects = {"time": time.time(), "fps": fps, "objects":[]}
-    count = 1
+def populate_dictionary_with_objects(model_results, fps):
+    global list_objects
+
+    list_objects["fps"] = fps
+    list_objects["objects"] = [] # keeps track of the current objects, removing the old ones
+
 
     for box in model_results.boxes:
+        if box.id is None:
+            continue  # skip untracked detections
+
+        # object_id = int(box.id) if box.id is not None else None
+        object_id = int(box.id)
         class_id = int(box.cls[0])
         class_name = model_results.names[class_id]
         confidence = float(box.conf[0])
 
-        latest_objects["objects"].append({
+        list_objects["objects"].append({
+            "object_id": object_id,
             "class_id": class_id,
             "class_name": class_name,
-            "confidence": confidence,
-            "count": count
+            "confidence": confidence
         })
 
-        print(latest_objects)
-
-
-    with open('./output.json', 'w') as outfile:
-        json.dump(latest_objects, outfile, indent=4)
 
 
 # Route to serve the video stream
@@ -102,16 +105,22 @@ def objects_dictionary_to_json(model_results, fps):
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
+
+
 # Route to show the list of object detected from the model
 @app.route('/get_list_objects')
 def get_list_objects():
-    pass
+    return jsonify(list_objects)
+
 
 
 # Route to serve the HTML page that displays the video stream
 @app.route('/')
 def index():
     return render_template("index.html")
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

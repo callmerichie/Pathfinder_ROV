@@ -3,8 +3,29 @@
         <head>
             <title>Live Video Stream</title>
         </head>
-                <body>
-            <h1>Live Video Feed</h1>
-            <img src="/video_feed" style="width:640px; height:480px;">
-                </body>
+        <body>
+            <div id="main_page">
+                <div id="video_stream">
+                    <h1>Live Video Feed</h1>
+                    <img src="/video_feed" style="width:640px; height:480px;">
+                </div>
+                <div id="objects_list_table">
+                    <h2>Objects Detected</h2>
+                    <table id="interactive_table">
+                        <thead>
+                            <tr id="first_row">
+                                <th>FPS</th>
+                                <th>Object ID</th>
+                                <th>Class ID</th>
+                                <th>Class Name</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="objects_list">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <script src="{{ url_for('static', filename='main.js') }}"></script>
+        </body>
 </html>
