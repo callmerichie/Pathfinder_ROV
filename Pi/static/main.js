@@ -1,5 +1,3 @@
-console.log("app.js loaded");
-
 // get the object_list for Flask
 async function getObjects() {
   const response = await fetch("/get_list_objects", {
@@ -13,11 +11,12 @@ async function getObjects() {
   return response.json();
 }
 
-// add row in the table
-async function updateObjects() {
+// add row in the table -> possible update: change the row tables only if something changed 
+// (compare timestamp or hash/ sort by object id)
+async function showListObjects() {
   try {
     const objects = await getObjects();
-    console.log(objects);
+    //console.log(objects);
     renderObjects(objects);
 
   } catch (err) {
@@ -25,7 +24,7 @@ async function updateObjects() {
   }
 }
 
-
+// creates the row
 function renderObjects(objects_list){
     let row = document.getElementById("objects_list");
 
@@ -41,6 +40,8 @@ function renderObjects(objects_list){
             <td>${object.class_id}</td>
             <td>${object.class_name}</td>
             <td>${object.confidence}</td>
+            <td><button id="rowTracking${i}" class="btn btn-warning" onclick="trackObjectROV(${object.object_id ?? ""}, ${JSON.stringify(object.class_name)})">TRACK OBJECT</button></td>
+            <td><button id="rowStopROV${i}" class="btn btn-danger" onclick="stopROV(${object.object_id ?? ""}, ${JSON.stringify(object.class_name)})">STOP OBJECT TRACKING</button></td>
         </tr>`;   
 
     }
@@ -48,8 +49,33 @@ function renderObjects(objects_list){
 
 }
 
-// poll every 300 ms (≈ 3 times/sec)
-setInterval(updateObjects, 300);
+
+// send the object choesen to flask
+async function trackObjectROV(objectId, className) {
+  const res = await fetch("/tracking_object", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ object_id: objectId, class_name: className })
+  });
+  console.log(await res.json());
+}
+
+
+// send a stop request to flask to stop the tracking and the rov
+async function stopROV(objectId, className) {
+  const res = await fetch("/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ object_id: objectId, class_name: className })
+  });
+  console.log(await res.json());
+}
+
+
+
+
+// poll every 1000 ms (≈ 10 times/sec)
+setInterval(showListObjects, 1000);
 
 // optional: first immediate call
-updateObjects();
+showListObjects();

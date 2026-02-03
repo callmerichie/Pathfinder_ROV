@@ -1,4 +1,4 @@
-from flask import Flask, Response, render_template, jsonify
+from flask import Flask, Response, render_template, jsonify, request
 from picamera2 import Picamera2
 from ultralytics import YOLO
 import cv2
@@ -112,6 +112,24 @@ def video_feed():
 @app.route('/get_list_objects')
 def get_list_objects():
     return jsonify(list_objects)
+
+
+
+# Route to receive the object to track
+@app.route('/tracking_object', methods=['POST'])
+def tracking_object():
+    if request.method == 'POST':
+        object_name = data.get['object_id']
+        object_class = data.get['class_name']
+
+
+
+
+
+# Route to stop tracking and ROV
+@app.route('/stop_tracking_rov', methods=['POST'])
+def stop_tracking_rov():
+    pass
 
 
 

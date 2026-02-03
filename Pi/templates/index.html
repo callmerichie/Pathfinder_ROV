@@ -9,28 +9,36 @@
                     align-items: flex-start;
                 }
 
-                /* Video block stays fixed */
                 #video_stream {
                     flex: 0 0 auto;
                 }
 
                 /* Table container */
                 #objects_list_table {
-                    flex: 0 0 600px;          /* fixed width */
-                    max-height: 480px;       /* same height as video */
-                    overflow-y: auto;        /* scroll only table */
-                    background: white;
-                    border-radius: 6px;
+                    flex: 0 0 850px;
+                    max-height: 480px;
+                    overflow-y: auto;
+                    background: transparent;     /* 🔥 matches page */
                 }
 
-                /* Keep table layout stable */
+                /* Stable layout */
                 #interactive_table {
                     table-layout: fixed;
                     width: 100%;
                 }
 
-                /* Prevent column jumping */
+                /* Sticky table header */
+                #interactive_table thead th {
+                    position: sticky;
+                    top: 0;
+                    z-index: 2;
+                    background: var(--bs-primary);   /* keep Bootstrap blue */
+                    color: white;
+                }
+
+                /* Prevent stretching */
                 th, td {
+                    width: 200px;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -47,18 +55,28 @@
                 </div>
                 <div id="objects_list_table">
                     <h2>Objects Detected</h2>
-                    <table id="interactive_table"  class="table table-bordered table-striped table-hover">
+                    <table id="interactive_table"
+                        class="table table-bordered table-striped table-hover mb-0">
+                        <colgroup>
+                            <col style="width:60px">
+                            <col style="width:90px">
+                            <col style="width:90px">
+                            <col style="width:100px">
+                            <col style="width:100px">
+                            <col style="width:140px">
+                            <col style="width:200px">
+                        </colgroup>
                         <thead class="table-primary">
-                            <tr id="first_row">
+                            <tr>
                                 <th>FPS</th>
                                 <th>Object ID</th>
                                 <th>Class ID</th>
                                 <th>Class Name</th>
                                 <th>Confidence</th>
+                                <th colspan="2">Track Object</th>
                             </tr>
                         </thead>
-                        <tbody id="objects_list">
-                        </tbody>
+                        <tbody id="objects_list"></tbody>
                     </table>
                 </div>
             </div>
