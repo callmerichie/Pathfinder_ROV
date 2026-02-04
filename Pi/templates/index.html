@@ -18,7 +18,7 @@
                     flex: 0 0 850px;
                     max-height: 480px;
                     overflow-y: auto;
-                    background: transparent;     /* 🔥 matches page */
+                    background: transparent;     
                 }
 
                 /* Stable layout */
@@ -32,7 +32,7 @@
                     position: sticky;
                     top: 0;
                     z-index: 2;
-                    background: var(--bs-primary);   /* keep Bootstrap blue */
+                    background: var(--bs-primary);
                     color: white;
                 }
 
@@ -80,6 +80,7 @@
                     </table>
                 </div>
             </div>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
             <script src="{{ url_for('static', filename='main.js') }}"></script>
         </body>
 </html>

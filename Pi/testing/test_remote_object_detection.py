@@ -1,4 +1,5 @@
 from flask import Flask, Response, render_template, jsonify, request
+from flask_socketio import SocketIO, send, emit
 from picamera2 import Picamera2
 from ultralytics import YOLO
 import cv2
@@ -16,16 +17,21 @@ picam2.start()
 time.sleep(5)  # Camera warm-up
 
 # Load YOLO
-model = YOLO("yolo11n_ncnn_model", task="detect", verbose=True)
+model = YOLO("yolo11n_ncnn_model", task="detect", verbose=False)
 
-#keep track of the object for Flask
+# keep track of the objects for Flask
 list_objects = {
     "fps": None,
     "objects": []
 }
 
+# keep track of the selected object to track
+object_tracked = {"enabled": False, "object_id": None, "class_name": None}
+
 # Flask object
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret'
+socketio = SocketIO(app)
 
 # Function to generate frames from the camera
 def generate_frames():
@@ -36,7 +42,7 @@ def generate_frames():
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
         # Run YOLO model on the captured frame and store the results
-        results = model.track(frame, conf=0.5, persist=True)
+        results = model.track(frame, conf=0.5, persist=True, verbose=False)
 
         # Output the visual detection data, we will draw this on our camera preview window
         annotated_frame = results[0].plot()
@@ -75,7 +81,6 @@ def generate_frames():
 
 # storing the identified objects to a json
 def populate_dictionary_with_objects(model_results, fps):
-    global list_objects
 
     list_objects["fps"] = fps
     list_objects["objects"] = [] # keeps track of the current objects, removing the old ones
@@ -118,10 +123,19 @@ def get_list_objects():
 # Route to receive the object to track
 @app.route('/tracking_object', methods=['POST'])
 def tracking_object():
-    if request.method == 'POST':
-        object_name = data.get['object_id']
-        object_class = data.get['class_name']
+    data = request.get_json(silent=True) or {}
+    object_id = data.get('object_id')
+    object_class_name = data.get('class_name')
 
+    if object_id is None or object_class_name is None:
+        return jsonify({"ok": False, "error": "Missing object_id or class_name"}), 400
+
+    object_tracked['enabled'] = True
+    object_tracked['object_id'] = object_id
+    object_tracked['class_name'] = object_class_name
+
+    print(f"Object received: {object_id}, {object_class_name}")
+    return jsonify({"ok": True, "target": object_tracked})
 
 
 
@@ -129,7 +143,38 @@ def tracking_object():
 # Route to stop tracking and ROV
 @app.route('/stop_tracking_rov', methods=['POST'])
 def stop_tracking_rov():
-    pass
+    data = request.get_json(silent=True) or {}
+    object_id = data.get('object_id')
+    object_class_name = data.get('class_name')
+
+    if object_id is None or object_class_name is None:
+        return jsonify({"ok": False, "error": "Missing object_id or class_name"}), 400
+
+    print(f"Stopping Object: {object_id}, {object_class_name}")
+
+    object_tracked['enabled'] = False
+    object_tracked['object_id'] = object_id
+    object_tracked['class_name'] = object_class_name
+
+    return jsonify({"ok": True, "target": object_tracked})
+
+
+
+@socketio.on("manual_movement")
+def manual_movement(data):
+
+    if data["w"]:
+        print("MANUAL MOVEMENT: FORWARD")
+    elif data["s"]:
+        print("MANUAL MOVEMENT: BACKWARD")
+    elif data["a"]:
+        print("MANUAL MOVEMENT: LEFT")
+    elif data["d"]:
+        print("MANUAL MOVEMENT: RIGHT")
+    else:
+       print("MANUAL MOVEMENT: STOP")
+
+    return {"SERVER RECEIVED": data}
 
 
 
@@ -141,5 +186,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
-
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)

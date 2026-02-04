@@ -40,8 +40,18 @@ function renderObjects(objects_list){
             <td>${object.class_id}</td>
             <td>${object.class_name}</td>
             <td>${object.confidence}</td>
-            <td><button id="rowTracking${i}" class="btn btn-warning" onclick="trackObjectROV(${object.object_id ?? ""}, ${JSON.stringify(object.class_name)})">TRACK OBJECT</button></td>
-            <td><button id="rowStopROV${i}" class="btn btn-danger" onclick="stopROV(${object.object_id ?? ""}, ${JSON.stringify(object.class_name)})">STOP OBJECT TRACKING</button></td>
+            <td>
+              <button id="rowTracking${i}" class="btn btn-warning" 
+                  onclick='trackObjectROV(${JSON.stringify(object.object_id)}, ${JSON.stringify(object.class_name)})'>
+                  TRACK OBJECT
+              </button>
+            </td>
+            <td>
+              <button id="rowStopROV${i}" class="btn btn-danger"
+                  onclick='stopROV(${JSON.stringify(object.object_id)}, ${JSON.stringify(object.class_name)})'>
+                  STOP OBJECT TRACKING
+              </button>
+            </td>
         </tr>`;   
 
     }
@@ -57,21 +67,61 @@ async function trackObjectROV(objectId, className) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ object_id: objectId, class_name: className })
   });
-  console.log(await res.json());
+  console.log(await res.json()); // print the reponse from flask
 }
 
 
 // send a stop request to flask to stop the tracking and the rov
 async function stopROV(objectId, className) {
-  const res = await fetch("/track", {
+  const res = await fetch("/stop_tracking_rov", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ object_id: objectId, class_name: className })
   });
-  console.log(await res.json());
+  console.log(await res.json()); // print the reponse from flask
 }
 
 
+// Manual movement state
+const keys = { w: false, a: false, s: false, d: false };
+
+// Keyboard handling
+document.addEventListener("keydown", (e) => {
+  if (e.key in keys) {
+    keys[e.key] = true;
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if (e.key in keys) {
+    keys[e.key] = false;
+    e.preventDefault();
+  }
+});
+
+// Socket.IO connection
+const socket = io();
+
+socket.on("connect", () => {
+  console.log("Socket connected:", socket.id);
+});
+
+// Send commands at fixed rate
+setInterval(() => {
+  socket.emit("manual_movement", keys);
+}, 50);
+
+// Safety stop
+window.addEventListener("blur", () => {
+  Object.keys(keys).forEach(k => keys[k] = false);
+  socket.emit("manual_movement", keys);
+});
+
+
+socket.emit("manual_movement", keys, (reply) => {
+  console.log("Server reply:", reply);
+});
 
 
 // poll every 1000 ms (≈ 10 times/sec)
