@@ -1,3 +1,66 @@
+// Socket.IO connection
+const socket = io();
+
+socket.on("connect", () => {
+  console.log("Socket connected:", socket.id);
+});
+
+// Manual movement state
+const keys = { w: false, a: false, s: false, d: false };
+
+// object tracked
+let objectTracked = false;
+//let manualOverrideSent = false;
+
+
+// Keyboard handling
+document.addEventListener("keydown", (e) => {
+  if (e.key in keys) {
+    keys[e.key] = true;
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if (e.key in keys) {
+    keys[e.key] = false;
+    e.preventDefault();
+  }
+});
+
+
+
+// checks if any key is pressed
+ function anyKeyPressed(){
+   return Object.values(keys).some(v => v);
+ }
+
+
+// Send commands at fixed rate
+setInterval(() => {
+  if(objectTracked === false){
+    socket.emit("manual_movement", keys);
+  }
+
+  if(anyKeyPressed() && objectTracked === true){
+    alert("Tracking active: stop tracking for manual driving!");
+  }
+}, 50);
+
+// Safety stop: in case of switch pages or crashing, the vehicle stops while in manual
+window.addEventListener("blur", () => {
+  Object.keys(keys).forEach(k => keys[k] = false);
+  socket.emit("manual_movement", keys);
+});
+
+
+
+socket.emit("manual_movement", keys, (reply) => {
+  console.log("Server reply:", reply);
+});
+
+
+
 // get the object_list for Flask
 async function getObjects() {
   const response = await fetch("/get_list_objects", {
@@ -62,6 +125,10 @@ function renderObjects(objects_list){
 
 // send the object choesen to flask
 async function trackObjectROV(objectId, className) {
+
+  objectTracked = true;
+  //manualOverrideSent = false;
+
   const res = await fetch("/tracking_object", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -73,6 +140,10 @@ async function trackObjectROV(objectId, className) {
 
 // send a stop request to flask to stop the tracking and the rov
 async function stopROV(objectId, className) {
+
+  objectTracked = false;
+  //manualOverrideSent = false;
+
   const res = await fetch("/stop_tracking_rov", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -81,47 +152,6 @@ async function stopROV(objectId, className) {
   console.log(await res.json()); // print the reponse from flask
 }
 
-
-// Manual movement state
-const keys = { w: false, a: false, s: false, d: false };
-
-// Keyboard handling
-document.addEventListener("keydown", (e) => {
-  if (e.key in keys) {
-    keys[e.key] = true;
-    e.preventDefault();
-  }
-});
-
-document.addEventListener("keyup", (e) => {
-  if (e.key in keys) {
-    keys[e.key] = false;
-    e.preventDefault();
-  }
-});
-
-// Socket.IO connection
-const socket = io();
-
-socket.on("connect", () => {
-  console.log("Socket connected:", socket.id);
-});
-
-// Send commands at fixed rate
-setInterval(() => {
-  socket.emit("manual_movement", keys);
-}, 50);
-
-// Safety stop
-window.addEventListener("blur", () => {
-  Object.keys(keys).forEach(k => keys[k] = false);
-  socket.emit("manual_movement", keys);
-});
-
-
-socket.emit("manual_movement", keys, (reply) => {
-  console.log("Server reply:", reply);
-});
 
 
 // poll every 1000 ms (≈ 10 times/sec)
