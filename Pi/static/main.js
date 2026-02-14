@@ -2,7 +2,7 @@
 const socket = io();
 
 socket.on("connect", () => {
-  console.log("Socket connected:", socket.id);
+  console.log("Socket connected");
 });
 
 // Manual movement state
@@ -10,7 +10,7 @@ const keys = { w: false, a: false, s: false, d: false };
 
 // object tracked
 let objectTracked = false;
-//let manualOverrideSent = false;
+let objectDetails = [];
 
 
 // Keyboard handling
@@ -43,7 +43,8 @@ setInterval(() => {
   }
 
   if(anyKeyPressed() && objectTracked === true){
-    alert("Tracking active: stop tracking for manual driving!");
+    console.log("Tracking active: disabaling it and activating manual driving");
+    stopROV(objectDetails[0], objectDetails[1]);
   }
 }, 50);
 
@@ -127,7 +128,7 @@ function renderObjects(objects_list){
 async function trackObjectROV(objectId, className) {
 
   objectTracked = true;
-  //manualOverrideSent = false;
+  objectDetails = [objectId, className];
 
   const res = await fetch("/tracking_object", {
     method: "POST",
@@ -142,7 +143,6 @@ async function trackObjectROV(objectId, className) {
 async function stopROV(objectId, className) {
 
   objectTracked = false;
-  //manualOverrideSent = false;
 
   const res = await fetch("/stop_tracking_rov", {
     method: "POST",

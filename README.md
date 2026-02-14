@@ -34,7 +34,10 @@ In this phase, I've decided to divide each boards in separate parts and test the
               <img width="713" height="579" alt="Screenshot 2026-01-19 171321" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" /> <br>
               a. yolo11n & yolo11n_ncnnn_model ( Ideal for resource-constrained devices like Raspberry Pi and NVIDIA Jetson. NCNN can provide significant performance improvements. 
               credits: https://docs.ultralytics.com/integrations/ncnn/#why-export-to-ncnn) This is the main model, There will be a comparison with older models like: yolov8n_ncnn_model and yolov5n_ncnn_model to see which fits best the case study.
-         3. Front-End: Basic streaming and a table that shows the objects detected to the user. The table is important so that the operator can choose which object the ROV has to move to.
+         3. Front-End: Basic streaming and a table that shows the objects detected to the user. The table is important so that the operator can choose which object the ROV has to move to. The movement system is based by capturing the keys
+            pressed from the keyboard(W,S,A,D) to move manually the ROV or pressing the tracking object button to move the vehicle autonomously. In the case the user is using the tracking mode and decides to press a key, the driving mode will be immediately switched in to manul.
+            The objects tracked have a confidence greater than 0.5.
+            ![Screenshot 2026-02-14 114430.png](Screenshot%202026-02-14%20114430.png)
          4. Back-End: Receive the commands if the user is in manual driving or the object that the ROV has to move to.
             - Object in the center of the frame. 
        - Two-way communication PI-Arduino: The two boards are connected via USB 

@@ -3,7 +3,9 @@ from flask_socketio import SocketIO, send, emit
 from picamera2 import Picamera2
 from ultralytics import YOLO
 import cv2
+import serial
 import time
+
 
 
 # Set up the camera with Picamera
@@ -28,10 +30,23 @@ list_objects = {
 # keep track of the selected object to track
 object_tracked = {"enabled": False, "object_id": None, "class_name": None}
 
+# keep track of the keys pressed by user
+# order of keys [w,a,s,d]
+keys = []
+
 # Flask object
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
 socketio = SocketIO(app)
+
+# set up arduino serial
+arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+time.sleep(5)
+
+arduino.reset_output_buffer()
+arduino.reset_input_buffer()
+
+
 
 # Function to generate frames from the camera
 def generate_frames():
@@ -104,12 +119,29 @@ def populate_dictionary_with_objects(model_results, fps):
         })
 
 
+# checking driving mode
+def driving_rov():
+
+    while True:
+        if object_tracked["enabled"]:
+            print("Feature to develop")
+
+        if arduino.in_waiting > 0:
+            line = arduino.readline().decode('ASCII').strip()
+            print("Arduino received:" + line)
+
+
+        arduino.write(commands[0].encode('ASCII'))
+
+        if arduino.in_waiting > 0:
+            line = arduino.readline().decode('ASCII').strip()
+            print("Arduino received:" + line)
+
 
 # Route to serve the video stream
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
 
 
 
@@ -136,7 +168,6 @@ def tracking_object():
 
     print(f"Object received: {object_id}, {object_class_name}")
     return jsonify({"ok": True, "target": object_tracked})
-
 
 
 
@@ -174,7 +205,14 @@ def manual_movement(data):
     else:
        print("MANUAL MOVEMENT: STOP")
 
-    return {"SERVER RECEIVED": data}
+
+    # keys in to integers for better performance of arduino
+    # keys[0] = data["w"]
+    # keys[1] = data["a"]
+    # keys[2] = data["d"]
+    # keys[3] = data["s"]
+
+    return {"SERVER RECEIVED": keys}
 
 
 
@@ -187,3 +225,4 @@ def index():
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    driving_rov()
