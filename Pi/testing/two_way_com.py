@@ -18,16 +18,16 @@ import serial  # Module needed for serial communication
 # being received. After 1 second, the function will return with whatever data
 # it has. The readline() function will only wait 1 second for a complete line
 # of input.
-ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
+ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 
 # Get rid of garbage/incomplete data
 ser.flush()
 
 # Infinite loop
-while (1):
+while 1:
 
     # If there is data available
-    if (ser.in_waiting > 0):
+    if ser.in_waiting > 0:
         # Read everything until the new line character
         # Convert the data from a byte into a string of type 'utf-8'
         # You could also use 'ascii'

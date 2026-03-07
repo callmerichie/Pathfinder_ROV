@@ -5,6 +5,8 @@ from ultralytics import YOLO
 import cv2
 import serial
 import time
+import logging
+import threading
 
 
 
@@ -32,12 +34,18 @@ object_tracked = {"enabled": False, "object_id": None, "class_name": None}
 
 # keep track of the keys pressed by user
 # order of keys [w,a,s,d]
-keys = []
+keys = [0, 0, 0, 0]
+keys_lock = threading.Lock()
+
 
 # Flask object
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret'
 socketio = SocketIO(app)
+
+# hide request logs
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 # set up arduino serial
 arduino = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
@@ -119,23 +127,23 @@ def populate_dictionary_with_objects(model_results, fps):
         })
 
 
-# checking driving mode
+# checking driving mode & send the keys to arduino
 def driving_rov():
-
+    last_sent = None
     while True:
-        if object_tracked["enabled"]:
-            print("Feature to develop")
+        with keys_lock:
+            current = bytes(keys)
 
-        if arduino.in_waiting > 0:
-            line = arduino.readline().decode('ASCII').strip()
-            print("Arduino received:" + line)
+        if current != last_sent:
+            arduino.write(current)
+            last_sent = current
 
+        # Drain the buffer — don't fall behind
+        while arduino.in_waiting > 0:
+            line = arduino.readline()
+            print(f"Arduino: {line.decode(errors='ignore').strip()}")
 
-        arduino.write(commands[0].encode('ASCII'))
-
-        if arduino.in_waiting > 0:
-            line = arduino.readline().decode('ASCII').strip()
-            print("Arduino received:" + line)
+        socketio.sleep(0.01)
 
 
 # Route to serve the video stream
@@ -166,7 +174,7 @@ def tracking_object():
     object_tracked['object_id'] = object_id
     object_tracked['class_name'] = object_class_name
 
-    print(f"Object received: {object_id}, {object_class_name}")
+    print(f"Object received:{object_tracked['enabled']}, {object_id}, {object_class_name}")
     return jsonify({"ok": True, "target": object_tracked})
 
 
@@ -193,25 +201,11 @@ def stop_tracking_rov():
 
 @socketio.on("manual_movement")
 def manual_movement(data):
-
-    if data["w"]:
-        print("MANUAL MOVEMENT: FORWARD")
-    elif data["s"]:
-        print("MANUAL MOVEMENT: BACKWARD")
-    elif data["a"]:
-        print("MANUAL MOVEMENT: LEFT")
-    elif data["d"]:
-        print("MANUAL MOVEMENT: RIGHT")
-    else:
-       print("MANUAL MOVEMENT: STOP")
-
-
-    # keys in to integers for better performance of arduino
-    # keys[0] = data["w"]
-    # keys[1] = data["a"]
-    # keys[2] = data["d"]
-    # keys[3] = data["s"]
-
+    with keys_lock:
+        keys[0] = 1 if data.get("w") else 0
+        keys[1] = 1 if data.get("a") else 0
+        keys[2] = 1 if data.get("s") else 0
+        keys[3] = 1 if data.get("d") else 0
     return {"SERVER RECEIVED": keys}
 
 
@@ -224,5 +218,5 @@ def index():
 
 
 if __name__ == "__main__":
+    socketio.start_background_task(driving_rov)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
-    driving_rov()

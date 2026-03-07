@@ -7,8 +7,6 @@
 #define ENB 10 // Enable pin for Motor B (PWM speed control)
 #define IN3 6  // Input 3 for Motor B (Direction control)
 #define IN4 5  // Input 4 for Motor B (Direction control)
-const unsigned long RUN_TIME = 5000; // 5 seconds
-unsigned long startTime;
 
 // address for the two VL53L0X sensors
 #define LOX1_ADDRESS 0x30
@@ -26,6 +24,8 @@ Adafruit_VL53L0X lox2 = Adafruit_VL53L0X();
 // this holds the measurement
 VL53L0X_RangingMeasurementData_t measure1;
 VL53L0X_RangingMeasurementData_t measure2;
+
+int keys [4];
 
 void setID() {
   // all reset
@@ -137,49 +137,6 @@ void stopVehicle(){
     analogWrite(ENB, 0);
 }
 
-void applyCommand(char command){
-  Serial.println("hello");
-  switch(command){
-    case 'W':
-      Serial.println("Ho ricevuto W");
-      break;
-    case 'S':
-      Serial.println("Ho ricevuto S");
-      break;
-    case 'D':
-      Serial.println("Ho ricevuto D");
-      break;
-    case 'A':
-     Serial.println("Ho ricevuto A");
-      break;
-    default:
-    Serial.println("Ho ricevuto qualcosa di strano!");
-      break;
-  }
-}
-
-// void applyCommand(){
-//   read_dual_sensors();
-//   startTime = millis();
-
-//   while(true){
-//     read_dual_sensors();
-
-//     if(sensor1 <= 50 || sensor2 <= 50){
-//       stopVehicle();
-//       delay(5000);
-//       break;
-//     }
-
-//     moveForward();
-
-//     if(millis() - startTime >= RUN_TIME){
-//       stopVehicle();
-//       delay(5000);
-//       break;
-//     }
-//   }
-// }
 
 void setup() {
   Serial.begin(115200);
@@ -197,26 +154,37 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 
-  Serial.println("Shutdown pins inited...");
+  // Serial.println("Shutdown pins inited...");
 
-  digitalWrite(SHT_LOX1, LOW);
-  digitalWrite(SHT_LOX2, LOW);
+  // digitalWrite(SHT_LOX1, LOW);
+  // digitalWrite(SHT_LOX2, LOW);
 
-  Serial.println("Both in reset mode...(pins are low)");
+  // Serial.println("Both in reset mode...(pins are low)");
   
   
-  Serial.println("Starting...");
+  // Serial.println("Starting...");
 
-  setID(); //testing if sensors vl53l0x works
-  check_surrounding_area(); //check if object near to rov
+  // setID(); //testing if sensors vl53l0x works
+  // check_surrounding_area(); //check if object near to rov
 }
 
-void loop(){
- if(Serial.available() > 0){
-    char command = Serial.read();
-    // command.trim();
-    Serial.println(command);
-    applyCommand(command);
-    read_dual_sensors();
-  }
+void loop() {
+    if (Serial.available() >= 4) {
+        for (int i = 0; i < 4; i++) {
+            keys[i] = Serial.read();
+        }
+
+        // Debug print
+        Serial.print("W:"); Serial.print(keys[0]);
+        Serial.print(" A:"); Serial.print(keys[1]);
+        Serial.print(" S:"); Serial.print(keys[2]);
+        Serial.print(" D:"); Serial.println(keys[3]);
+
+        // Act on current key state
+        if (keys[0] == 1) { moveForward();  }
+        else if (keys[2] == 1) { moveBackward(); }
+        else if (keys[1] == 1) { turnLeft();     }
+        else if (keys[3] == 1) { turnRight();    }
+        else { stopVehicle(); }
+    }
 }

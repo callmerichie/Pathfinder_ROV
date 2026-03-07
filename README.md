@@ -41,7 +41,7 @@ In this phase, I've decided to divide each boards in separate parts and test the
          4. Back-End: Receive the commands if the user is in manual driving or the object that the ROV has to move to.
             - Object in the center of the frame. 
        - Two-way communication PI-Arduino: The two boards are connected via USB 
-         1. find the ttyACM0 port (USB-ARDUINO)
+         1. Locate the ttyACM0 port corresponding to the USB connection on the Arduino. (ls /dev/tty* the connection is /dev/ttyACM0) 
          2. set the baud rate to 115200 (stty -F /dev/ttyACM0 115200)
        - UPS for power supply with 1 18650 battery
 

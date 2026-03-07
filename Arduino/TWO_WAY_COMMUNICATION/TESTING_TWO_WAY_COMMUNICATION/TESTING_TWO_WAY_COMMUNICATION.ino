@@ -10,7 +10,7 @@ Date: July 5, 2020
 void setup(){
    
   // Set the baud rate  
-  Serial.begin(9600);
+  Serial.begin(115200);
    
 }
  
