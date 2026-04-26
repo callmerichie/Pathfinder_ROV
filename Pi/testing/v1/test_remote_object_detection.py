@@ -21,7 +21,7 @@ picam2.start()
 time.sleep(5)  # Camera warm-up
 
 # Load YOLO
-model = YOLO("yolo11n_ncnn_model", task="detect", verbose=False)
+model = YOLO("../yolo11n_ncnn_model", task="detect", verbose=False)
 
 # keep track of the objects for Flask
 list_objects = {

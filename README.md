@@ -30,10 +30,11 @@ In this phase, I've decided to divide each boards in separate parts and test the
     1. Testing:
        - Arducam OV5647 camera module with built-in motorized IR-CUT filter attached via CSI.
          1. Picamera2 with Flask for localhost streaming
-         2. Testing Streaming while using YOLO Object Detection models: <br>
-              <img width="713" height="579" alt="Screenshot 2026-01-19 171321" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" /> <br>
-              a. yolo11n & yolo11n_ncnnn_model ( Ideal for resource-constrained devices like Raspberry Pi and NVIDIA Jetson. NCNN can provide significant performance improvements. 
-              credits: https://docs.ultralytics.com/integrations/ncnn/#why-export-to-ncnn) This is the main model, There will be a comparison with older models like: yolov8n_ncnn_model and yolov5n_ncnn_model to see which fits best the case study.
+            2. Testing Streaming while using YOLO Object Detection models: <br>
+                 <img width="713" height="579" alt="Screenshot 2026-01-19 171321" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" /> <br>
+                 a. yolo11n & yolo11n_ncnnn_model ( Ideal for resource-constrained devices like Raspberry Pi and NVIDIA Jetson. NCNN can provide significant performance improvements. 
+                 credits: https://docs.ultralytics.com/integrations/ncnn/#why-export-to-ncnn, "yolo detect predict  model=yolo11.pt" to download and to export "yolo export model=yolo11.pt format=ncnn" )
+                 This is the main model, There will be a comparison with older models like: yolov8n_ncnn_model and yolov5n_ncnn_model to see which fits best the case study.
          3. Front-End: Basic streaming and a table that shows the objects detected to the user. The table is important so that the operator can choose which object the ROV has to move to. The movement system is based by capturing the keys
             pressed from the keyboard(W,S,A,D) to move manually the ROV or pressing the tracking object button to move the vehicle autonomously. In the case the user is using the tracking mode and decides to press a key, the driving mode will be immediately switched in to manul.
             The objects tracked have a confidence greater than 0.5.

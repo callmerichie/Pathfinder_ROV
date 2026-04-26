@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pathfinder ROV</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <style>
+            #main_page {
+                display: flex;
+                gap: 20px;
+                align-items: flex-start;
+            }
+
+            #video_stream { flex: 0 0 auto; }
+
+            #objects_list_table {
+                flex: 0 0 850px;
+                max-height: 480px;
+                overflow-y: auto;
+            }
+
+            #interactive_table { table-layout: fixed; width: 100%; }
+
+            #interactive_table thead th {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background: var(--bs-primary);
+                color: white;
+            }
+
+            th, td {
+                width: 200px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Obstacle alert pulse */
+            @keyframes pulse-danger {
+                0%, 100% { opacity: 1; }
+                50%       { opacity: 0.4; }
+            }
+            #obstacle-alert { animation: pulse-danger 0.8s ease-in-out infinite; }
+
+            .sensor-label { font-weight: 600; min-width: 90px; display: inline-block; }
+            .sensor-value { min-width: 70px; display: inline-block; text-align: right; }
+        </style>
+    </head>
+
+    <body class="container-fluid bg-light py-3">
+
+        <!-- Obstacle alert (hidden until triggered) -->
+        <div id="obstacle-alert" class="alert alert-danger d-none mb-3" role="alert">
+            ⚠ OBSTACLE DETECTED — ROV automatically stopped
+        </div>
+
+        <!-- Video + object table -->
+        <div id="main_page" class="d-flex gap-4">
+            <div id="video_stream">
+                <h5 class="mb-2">Live Video Feed</h5>
+                <img src="/video_feed" style="width:640px; height:480px; display:block;">
+            </div>
+
+            <div id="objects_list_table">
+                <h5 class="mb-2">Objects Detected</h5>
+                <table id="interactive_table"
+                       class="table table-bordered table-striped table-hover mb-0">
+                    <colgroup>
+                        <col style="width:60px">
+                        <col style="width:90px">
+                        <col style="width:90px">
+                        <col style="width:100px">
+                        <col style="width:100px">
+                        <col style="width:140px">
+                        <col style="width:200px">
+                    </colgroup>
+                    <thead class="table-primary">
+                        <tr>
+                            <th>FPS</th>
+                            <th>Object ID</th>
+                            <th>Class ID</th>
+                            <th>Class Name</th>
+                            <th>Confidence</th>
+                            <th colspan="2">Track Object</th>
+                        </tr>
+                    </thead>
+                    <tbody id="objects_list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Distance sensors -->
+        <div id="sensor_panel" class="mt-4" style="max-width: 500px;">
+            <h5 class="mb-3">Distance Sensors</h5>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="sensor-label">Sensor 1 (left)</span>
+                    <span class="sensor-value text-muted" id="text-s1">---</span>
+                </div>
+                <div class="progress" style="height: 22px;">
+                    <div id="bar-s1" class="progress-bar bg-secondary"
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="sensor-label">Sensor 2 (right)</span>
+                    <span class="sensor-value text-muted" id="text-s2">---</span>
+                </div>
+                <div class="progress" style="height: 22px;">
+                    <div id="bar-s2" class="progress-bar bg-secondary"
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Colour legend -->
+            <div class="d-flex gap-3 small text-muted">
+                <span><span class="badge bg-success">&#9632;</span> &gt; 200 mm — safe</span>
+                <span><span class="badge bg-warning text-dark">&#9632;</span> 100–200 mm — caution</span>
+                <span><span class="badge bg-danger">&#9632;</span> &lt; 50 mm — stop</span>
+            </div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+        <script src="{{ url_for('static', filename='main.js') }}"></script>
+    </body>
+</html>
