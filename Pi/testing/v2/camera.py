@@ -38,10 +38,11 @@ class CameraStream:
     Inference FPS and stream FPS are fully decoupled.
     """
 
-    def __init__(self, picam2, model, list_objects):
+    def __init__(self, picam2, model, list_objects, object_tracked):
         self._picam2 = picam2
         self._model = model
         self._list_objects = list_objects
+        self._object_tracked = object_tracked
 
         self._latest_raw = None
         self._raw_lock = threading.Lock()
@@ -104,20 +105,36 @@ class CameraStream:
                 names = self._names
                 fps = self._fps
 
+            tracking_enabled = self._object_tracked["enabled"]
+            tracked_id = self._object_tracked["object_id"] if tracking_enabled else None
+
             # Draw last-known boxes scaled back to stream resolution
             if boxes is not None:
                 for box in boxes:
                     if box.id is None:
                         continue
+
+                    box_id = int(box.id[0])
+
+                    if tracking_enabled and box_id != tracked_id:
+                        continue
+
                     x1, y1, x2, y2 = box.xyxy[0].tolist()
                     x1, x2 = int(x1 * _SCALE_X), int(x2 * _SCALE_X)
                     y1, y2 = int(y1 * _SCALE_Y), int(y2 * _SCALE_Y)
 
                     class_id = int(box.cls[0])
                     label = f"{names[class_id]} {float(box.conf[0]):.2f}"
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                    if tracking_enabled:
+                        color = (0, 0, 255)
+                        label = f"TRACKING: {label}"
+                    else:
+                        color = (0, 255, 0)
+
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                     cv2.putText(frame, label, (x1, max(y1 - 10, 0)),
-                                font, 0.5, (0, 255, 0), 2)
+                                font, 0.5, color, 2)
 
             text = f'FPS: {fps:.1f}'
             text_size = cv2.getTextSize(text, font, 1, 2)[0]

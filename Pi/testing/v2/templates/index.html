@@ -124,6 +124,20 @@
             </div>
         </div>
 
+        <!-- Battery -->
+        <div id="battery_panel" class="mt-4" style="max-width: 500px;">
+            <h5 class="mb-3">Battery</h5>
+            <div class="d-flex justify-content-between mb-1">
+                <span class="sensor-label">Charge</span>
+                <span class="sensor-value text-muted" id="battery-text">---</span>
+            </div>
+            <div class="progress mb-1" style="height: 22px;">
+                <div id="battery-bar" class="progress-bar bg-secondary"
+                     role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="small text-muted" id="battery-voltage"></div>
+        </div>
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
         <script src="{{ url_for('static', filename='main.js') }}"></script>
     </body>

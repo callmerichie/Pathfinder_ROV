@@ -5,7 +5,7 @@ import logging
 def create_app(camera_stream, list_objects, object_tracked, keys, keys_lock):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'secret'
-    socketio = SocketIO(app)
+    socketio = SocketIO(app, async_mode='threading', cors_allowed_origins='*')
 
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)

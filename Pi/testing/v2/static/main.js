@@ -94,6 +94,42 @@ function updateSensorBar(id, value) {
 }
 
 
+// ── Battery ───────────────────────────────────────────────────────────────────
+
+socket.on("battery_update", (data) => {
+  const bar     = document.getElementById("battery-bar");
+  const text    = document.getElementById("battery-text");
+  const voltage = document.getElementById("battery-voltage");
+
+  if (data.percent === null) {
+    text.textContent    = "N/A";
+    text.className      = "sensor-value text-muted";
+    bar.style.width     = "0%";
+    bar.className       = "progress-bar bg-secondary";
+    voltage.textContent = "";
+    return;
+  }
+
+  const pct = Math.min(data.percent, 100);
+  bar.style.width  = `${pct}%`;
+  text.textContent = `${pct}%`;
+  text.className   = "sensor-value fw-bold";
+
+  if (pct <= 20) {
+    bar.className  = "progress-bar bg-danger";
+    text.className += " text-danger";
+  } else if (pct <= 50) {
+    bar.className  = "progress-bar bg-warning";
+    text.className += " text-warning";
+  } else {
+    bar.className  = "progress-bar bg-success";
+    text.className += " text-success";
+  }
+
+  voltage.textContent = data.voltage !== null ? `${data.voltage} V` : "";
+});
+
+
 // ── Object detection table ────────────────────────────────────────────────────
 
 async function getObjects() {
@@ -116,8 +152,11 @@ function renderObjects(objects_list) {
 
   for (let i = 0; i < objects_list.objects.length; i++) {
     const obj = objects_list.objects[i];
+    const isTracked = objectTracked && obj.object_id === objectDetails[0];
+    const rowClass  = objectTracked ? (isTracked ? "table-warning" : "opacity-50") : "";
+
     tbody.innerHTML +=
-      `<tr>
+      `<tr class="${rowClass}">
         <td>${objects_list.fps !== null ? parseFloat(objects_list.fps).toFixed(1) : "---"}</td>
         <td>${obj.object_id ?? ""}</td>
         <td>${obj.class_id}</td>
@@ -125,6 +164,7 @@ function renderObjects(objects_list) {
         <td>${parseFloat(obj.confidence).toFixed(2)}</td>
         <td>
           <button class="btn btn-warning btn-sm"
+              ${objectTracked ? "disabled" : ""}
               onclick='trackObjectROV(${JSON.stringify(obj.object_id)}, ${JSON.stringify(obj.class_name)})'>
             Track
           </button>
