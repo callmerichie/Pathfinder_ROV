@@ -3,7 +3,7 @@
 Adafruit_VL53L0X sensor = Adafruit_VL53L0X();
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   sensor.begin();
 }
 
