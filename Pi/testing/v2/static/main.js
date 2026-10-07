@@ -130,6 +130,88 @@ socket.on("battery_update", (data) => {
 });
 
 
+// ── System (Pi health) ────────────────────────────────────────────────────────
+
+const TEMP_WARN_C = 70;
+const TEMP_HOT_C  = 80;   // Pi 4 starts throttling around here
+
+socket.on("system_update", (data) => {
+  updateTemp(data.temp_c);
+  updatePower(data);
+  updateWifi(data.wifi_dbm);
+});
+
+function updateTemp(temp) {
+  const bar  = document.getElementById("sys-temp-bar");
+  const text = document.getElementById("sys-temp");
+
+  if (temp === null) {
+    text.textContent = "N/A";
+    text.className   = "sensor-value text-muted";
+    bar.style.width  = "0%";
+    bar.className    = "progress-bar bg-secondary";
+    return;
+  }
+
+  bar.style.width  = `${Math.min(temp, 100)}%`;
+  text.textContent = `${temp} °C`;
+
+  if (temp >= TEMP_HOT_C) {
+    bar.className  = "progress-bar bg-danger";
+    text.className = "sensor-value text-danger fw-bold";
+  } else if (temp >= TEMP_WARN_C) {
+    bar.className  = "progress-bar bg-warning";
+    text.className = "sensor-value text-warning fw-bold";
+  } else {
+    bar.className  = "progress-bar bg-success";
+    text.className = "sensor-value text-success";
+  }
+}
+
+function updatePower(data) {
+  const badge   = document.getElementById("sys-power");
+  const history = document.getElementById("sys-history");
+
+  if (data.throttled === null) {
+    badge.textContent = "N/A";
+    badge.className   = "badge bg-secondary";
+    history.textContent = "";
+    return;
+  }
+
+  if (data.under_voltage) {
+    badge.textContent = "UNDER-VOLTAGE";
+    badge.className   = "badge bg-danger";
+  } else if (data.throttled) {
+    badge.textContent = "THROTTLED";
+    badge.className   = "badge bg-danger";
+  } else {
+    badge.textContent = "OK";
+    badge.className   = "badge bg-success";
+  }
+
+  const past = [];
+  if (data.under_voltage_occurred) past.push("under-voltage");
+  if (data.throttled_occurred)     past.push("throttling");
+  history.textContent = past.length ? `Since boot: ${past.join(", ")} occurred` : "";
+}
+
+function updateWifi(dbm) {
+  const text = document.getElementById("sys-wifi");
+
+  if (dbm === null) {
+    text.textContent = "N/A";
+    text.className   = "sensor-value text-muted";
+    return;
+  }
+
+  text.textContent = `${dbm} dBm`;
+  if (dbm >= -60)      text.className = "sensor-value text-success";
+  else if (dbm >= -70) text.className = "sensor-value text-warning";
+  else                 text.className = "sensor-value text-danger fw-bold";
+}
+
+
 // ── Object detection table ────────────────────────────────────────────────────
 
 async function getObjects() {

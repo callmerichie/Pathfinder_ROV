@@ -138,6 +138,28 @@
             <div class="small text-muted" id="battery-voltage"></div>
         </div>
 
+        <!-- System (Raspberry Pi health) -->
+        <div id="system_panel" class="mt-4" style="max-width: 500px;">
+            <h5 class="mb-3">System</h5>
+            <div class="d-flex justify-content-between mb-1">
+                <span class="sensor-label">CPU temp</span>
+                <span class="sensor-value text-muted" id="sys-temp">---</span>
+            </div>
+            <div class="progress mb-3" style="height: 22px;">
+                <div id="sys-temp-bar" class="progress-bar bg-secondary"
+                     role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="sensor-label">Power / throttling</span>
+                <span id="sys-power" class="badge bg-secondary">---</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="sensor-label">Wi-Fi signal</span>
+                <span class="sensor-value text-muted" id="sys-wifi">---</span>
+            </div>
+            <div class="small text-muted" id="sys-history"></div>
+        </div>
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
         <script src="{{ url_for('static', filename='main.js') }}"></script>
     </body>

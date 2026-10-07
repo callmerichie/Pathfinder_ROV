@@ -73,7 +73,10 @@ class CameraStream:
                 continue
 
             small = cv2.resize(frame, _INFER_SIZE)
-            results = self._model.track(small, conf=0.5, persist=True, verbose=False)
+            # imgsz must match _INFER_SIZE, otherwise Ultralytics upscales back to 640.
+            # ByteTrack: no camera-motion compensation (cheaper than default BoT-SORT).
+            results = self._model.track(small, imgsz=_INFER_SIZE[0], conf=0.5, persist=True,
+                                        tracker="bytetrack.yaml", verbose=False)
 
             inference_time = results[0].speed.get("inference", 0)
             fps = 1000 / inference_time if inference_time > 0 else 0

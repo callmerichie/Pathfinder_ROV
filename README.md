@@ -14,15 +14,17 @@ A land-based ROV (Remotely Operated Vehicle) driven from a web browser. A Raspbe
 4. [Software](#software)
 5. [Communication protocols](#communication-protocols)
 6. [Web interface](#web-interface)
-7. [Object tracking (autonomous mode)](#object-tracking-autonomous-mode)
-8. [Development history](#development-history)
-9. [Problems encountered & solutions](#problems-encountered--solutions)
-10. [Design considerations](#design-considerations)
-11. [Known issues & limitations](#known-issues--limitations)
-12. [Project status & roadmap](#project-status--roadmap)
-13. [Setup & running](#setup--running)
-14. [Repository structure](#repository-structure)
-15. [References](#references)
+7. [System monitoring](#system-monitoring)
+8. [Object tracking (autonomous mode)](#object-tracking-autonomous-mode)
+9. [Development history](#development-history)
+10. [Problems encountered & solutions](#problems-encountered--solutions)
+11. [Design considerations](#design-considerations)
+12. [Known issues & limitations](#known-issues--limitations)
+13. [Test log](#test-log)
+14. [Project status & roadmap](#project-status--roadmap)
+15. [Setup & running](#setup--running)
+16. [Repository structure](#repository-structure)
+17. [References](#references)
 
 ---
 
@@ -122,6 +124,7 @@ Fritzing sources and PNGs are in [`schemas/`](schemas/).
 ### Power budget
 
 - The Pi 4B running YOLO + camera + IR LEDs can draw close to **3 A at 5 V**. The X728 supports up to 5 A.
+- **Never power the Pi from a PC USB port.** PC ports give about 0.5–1.5 A; under load the Pi reports under-voltage and slows its CPU (see problem #13). Use a 5.1 V / 3 A supply; the X728's USB-C input also needs ≥ 3 A. Long under-voltage sessions can also corrupt the SD card.
 - The **motors are on a separate supply** (AA pack via the L298N). Sharing a supply with the Pi would cause brown-outs and reboots every time the motors start.
 - The X728 requires 18650 cells **without** built-in protection circuits (per Geekworm); use reputable brands (Samsung, LG, Sony/Murata, Molicel).
 
@@ -153,6 +156,7 @@ The current code lives in [`Pi/testing/v2/`](Pi/testing/v2/). Older prototypes a
 | `camera.py` | Camera init, model loading, `CameraStream` class (three threads). |
 | `arduino.py` | `driving_rov()` background task: sends `keys[]` to the Arduino, parses sensor lines, emits `sensor_update`. |
 | `battery.py` | `battery_task()`: reads the MAX17043 every 5 s and emits `battery_update`. |
+| `system.py` | `system_task()`: reads Pi health (CPU temperature, throttling / under-voltage, Wi-Fi signal) every 5 s and emits `system_update`. |
 | `templates/index.html` | Single-page UI. |
 | `static/main.js` | Keyboard handling, Socket.IO client, object table, sensor and battery panels. |
 | `Arduino/TESTING_PYTHON_MOTORS/*.ino` | Arduino sketch currently flashed (v2 binary protocol). |
@@ -196,6 +200,7 @@ One text line every 200 ms: `D:<s1>,<s2>\n` in millimetres, `-1` = out of range.
 | Browser → Pi | WebSocket | `manual_movement` | `{w, a, s, d}` booleans, every 50 ms (not sent while tracking) |
 | Pi → Browser | WebSocket | `sensor_update` | `{s1, s2}` mm |
 | Pi → Browser | WebSocket | `battery_update` | `{voltage, percent}` (null if unreadable), every 5 s |
+| Pi → Browser | WebSocket | `system_update` | `{temp_c, under_voltage, throttled, under_voltage_occurred, throttled_occurred, wifi_dbm}` (null if unreadable), every 5 s |
 | Browser → Pi | HTTP GET | `/video_feed` | MJPEG stream |
 | Browser → Pi | HTTP GET | `/get_list_objects` | JSON object list, polled every 1 s |
 | Browser → Pi | HTTP POST | `/tracking_object` | `{object_id, class_name}` — start tracking |
@@ -221,10 +226,48 @@ Open `http://<raspberry-pi-ip>:5000` from any device on the same network.
 - **Objects Detected** — table refreshed every second (ID, class, confidence; only detections with confidence > 0.5). **Track** starts autonomous mode; **Stop tracking** returns to manual. While tracking, the tracked row is highlighted, other rows are dimmed and Track buttons are disabled.
 - **Distance Sensors** — two bars, colour-coded: green > 200 mm, blue 100–200 mm, yellow ≤ 100 mm, red ≤ 50 mm. A pulsing red banner appears when an obstacle is within 50 mm.
 - **Battery** — charge % and voltage from the UPS fuel gauge.
+- **System** — Raspberry Pi health: CPU temperature, power/throttling status, Wi-Fi signal (see [System monitoring](#system-monitoring)).
 
 <img width="1533" height="554" alt="Web interface — stream and detected objects table" src="https://github.com/user-attachments/assets/c6676e95-3632-4b8b-87ba-c7e002fd3ff9" />
 
 <img width="713" height="579" alt="YOLO detection on the Pi stream" src="https://github.com/user-attachments/assets/f5abbdb0-e118-4fb7-8402-d679f78d4cff" />
+
+---
+
+## System monitoring
+
+The Pi's hardware condition directly affects the results: when the CPU overheats or the supply voltage drops, the Pi lowers its clock speed (*throttling*) and YOLO's FPS drops with it — silently. The **System** panel makes this visible while driving and provides measured data on the cooling (P165-B) and the power supply (X728 UPS).
+
+### What is shown
+
+| Metric | Source on the Pi | Why it matters | Colour coding |
+|---|---|---|---|
+| **CPU temperature** | `/sys/class/thermal/thermal_zone0/temp` | The Pi 4 throttles at ~80 °C; shows whether the heatsink + fan keep up with continuous YOLO inference | green < 70 °C, yellow 70–80 °C, red ≥ 80 °C |
+| **Power / throttling** | `vcgencmd get_throttled` (bit flags) | Detects **under-voltage** (weak supply or batteries, bad cable) and **throttling** happening now, plus whether either has happened since boot | `OK` green, `UNDER-VOLTAGE` / `THROTTLED` red, "Since boot: …" note |
+| **Wi-Fi signal** | `/proc/net/wireless` (dBm) | The ROV moves away from the router; a weak signal explains laggy video or delayed commands | green ≥ −60 dBm, yellow −60…−70, red < −70 |
+
+`vcgencmd get_throttled` returns a hex value whose bits are: `0x1` under-voltage now, `0x4` throttled now, `0x10000` under-voltage has occurred, `0x40000` throttling has occurred. `0x0` means everything is fine.
+
+All three readings use files or tools already on Raspberry Pi OS — no extra Python packages. Each reading fails gracefully (shows "N/A") if unavailable.
+
+### Other metrics considered
+
+| Metric | Decision |
+|---|---|
+| Inference FPS | Already shown on the video overlay and in the object table |
+| CPU usage % | Nice to have; would need `psutil`. Not added for now |
+| RAM usage | Low value — model + stream fit comfortably in the Pi 4's memory |
+| Power source (mains / battery) | Planned together with the X728 work (AC-loss signal on GPIO6) |
+
+### Test mode (without the Arduino)
+
+To test the camera, AI detection and System panel on their own, start the server with:
+
+```bash
+python main.py --no-arduino
+```
+
+The Arduino is not opened and the driving/sensor task is not started. The web page is the same: video, object table, Battery and System panels work normally; the distance sensor bars stay at "---" and WASD keys have no effect.
 
 ---
 
@@ -254,7 +297,7 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 | Mar 2026 | **Manual driving working end to end** (browser → Pi → Arduino → motors). |
 | Apr 2026 | **v2 refactor**: monolithic script split into `main/app/camera/arduino`; three-thread camera pipeline; binary 4-byte serial protocol; distance-sensor panel and obstacle banner. v1 moved to `Pi/testing/v1/`. |
 | May 2026 | Battery panel (UPS fuel gauge), tracking Phase 1 (visual), sensor-emit fix. |
-| Oct 2026 | Hardware upgrades: Geekworm X728 UPS, P165-B heatsink + fan, new GY-530 VL53L0X boards. Documentation rewrite. |
+| Oct 2026 | Hardware upgrades: Geekworm X728 UPS, P165-B heatsink + fan, new GY-530 VL53L0X boards. Documentation rewrite. System monitoring panel and Arduino-free test mode; first test revealed under-voltage when powered from a PC USB port. |
 
 ---
 
@@ -274,6 +317,11 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 | 10 | Socket flooded with sensor events | `sensor_update` emitted for every parsed line | Parse all pending lines, emit once per loop |
 | 11 | Battery always "N/A" | The old **X703 UPS has no I2C fuel gauge**; on one attempt the address showed as `UU` (claimed by a kernel driver) | Replaced with the **X728** (MAX17043 at `0x36`). `battery.py` must be pointed at I2C bus 1 — see roadmap |
 | 12 | Tight mechanical fit (heatsink + UPS + CSI ribbon) | P165-B is 11 mm tall | Use a 2×20 header extension if boards touch; avoid sharp bends in the ribbon (causes intermittent "camera not detected") |
+| 13 | System panel reported **UNDER-VOLTAGE**, and CPU temperature stayed at only 32 °C with YOLO running | Pi powered from a **PC USB-C port**, which gives about 0.5–1.5 A; the Pi 4 needs 3 A at 5.1 V. On under-voltage the firmware lowers the CPU clock, so the CPU runs cooler and YOLO slower | Use a proper 5.1 V / 3 A supply (official Raspberry Pi PSU or equivalent). Comparison test planned — see [Test log](#test-log) |
+| 14 | Inference only **2.3–2.4 FPS** even with full power (1.5 GHz, no throttling) | The NCNN model had been exported with the default size **640** (`yolo export ... format=ncnn` without `imgsz`). An exported model runs at its export size, so the 320×240 frame was upscaled back to 640 and problem 3's optimisation did nothing | Re-exported the model at 320 (`yolo export model=yolo11n.pt format=ncnn imgsz=320`; `metadata.yaml` now shows `imgsz: [320, 320]`) → **6–9 FPS** (≈ 3×). `track()` also gets `imgsz=320` explicitly, so code and model stay in sync |
+| 15 | `AttributeError: property 'session' of 'RequestContext' object has no setter` on every Socket.IO event | Flask is loaded from the **system packages** (`/usr/lib/python3/dist-packages`, installed with apt — the venv uses system site-packages because picamera2 needs them), while Flask-SocketIO comes from pip in the venv. The two are updated separately and drifted to incompatible versions; handlers never run, so WASD and target selection silently fail (video and system panel still work) | Upgraded `flask-socketio`, `python-socketio`, `python-engineio` (`pip install --upgrade ...`) — error gone. ✅ Verified on the Pi |
+| 16 | `WARNING ⚠️ not enough matching points` flooding the log | Default tracker **BoT-SORT** estimates camera motion by matching feature points between frames; plain scenes have too few | Switched to **ByteTrack** (`tracker="bytetrack.yaml"`): no camera-motion step, lighter on the CPU. ✅ Verified on the Pi: warning gone, FPS unchanged (6–9) |
+| 17 | `ConnectionError` traceback from `engineio/async_drivers/_websocket_wsgi.py` | Printed when the browser page is **reloaded**: the old WebSocket closes and Flask's development server logs it as an error | Harmless — the page reconnects and everything keeps working. Ignored |
 
 ---
 
@@ -281,7 +329,7 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 
 - **Why split Arduino and Pi?** The Pi is busy with YOLO and its Linux scheduler is not real-time. The Arduino guarantees that obstacle stops happen within one sensor cycle (~200 ms) regardless of the Pi's load.
 - **Why NCNN?** Ultralytics recommends NCNN for ARM boards such as the Raspberry Pi; it is significantly faster than running the PyTorch model. A comparison with `yolov8n` and `yolov5n` (NCNN) is planned.
-- **Why `track()` instead of `predict()`?** Tracking gives each object a persistent ID across frames, which is what lets the user select "this person" and the ROV keep following the same one.
+- **Why `track()` instead of `predict()`?** Tracking gives each object a persistent ID across frames, which is what lets the user select "this person" and the ROV keep following the same one. **ByteTrack** is used instead of the default BoT-SORT: the camera moves with the ROV, but BoT-SORT's motion compensation costs CPU and fails on plain scenes.
 - **Why pass state by reference?** `main.py` owns everything; modules receive only what they need. No hidden globals, no circular imports, and hardware can be disabled for testing by commenting two lines.
 - **Why `app.py` never touches the Arduino?** Separation of concerns: web code writes intentions (`keys[]`), a single background task owns the serial port.
 - **Why WebSocket for driving and HTTP for the object list?** Driving needs low-latency, frequent updates (every 50 ms); the object list is fine at 1 Hz with simple polling.
@@ -297,9 +345,78 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 - **Battery reading uses the wrong I2C bus.** `battery.py` opens `SMBus(0)`; on the Pi 4B the header I2C (where the X728 lives) is **bus 1**.
 - **Binary protocol has no framing.** If a byte is ever lost, the 4-byte commands can go out of alignment. A start byte or checksum would make it robust.
 - **Turning is a one-wheel pivot** at a fixed PWM (115). Speed is not adjustable from the UI; proportional control needs a protocol upgrade.
-- **Inference FPS after the v2 optimisations has not been measured on hardware yet** (expected ~4–8 FPS inference, ~20 FPS stream).
-- **Local network only** — no authentication, no remote access yet.
+- **Inference FPS: 6–9** after re-exporting the model at 320 (was 2.3–2.4, problem 14). Stream FPS not measured separately yet.
 - `object_tracked` is updated without a lock; acceptable for now (single writer per field), but worth revisiting with the steering logic.
+
+---
+
+## Test log
+
+All tests run on the Raspberry Pi 4B.
+
+### Monitoring commands
+
+Run these in a **second SSH session** while `main.py` runs in the first one (PyCharm: **+** in the Terminal panel, then `ssh richie@192.168.1.17`; Windows Terminal: Ctrl+Shift+T).
+
+| Command | Example output | Meaning |
+|---|---|---|
+| `vcgencmd measure_temp` | `temp=37.4'C` | CPU temperature. The Pi starts throttling at 80 °C |
+| `vcgencmd measure_clock arm` | `frequency(48)=1500345728` | Current CPU clock in Hz. ≈ 1 500 000 000 = 1.5 GHz (full speed); 600–1000 MHz means it is being slowed down |
+| `vcgencmd get_throttled` | `throttled=0x0` | Power / heat flags. `0x0` = no problems. The last digit is *happening now* (1 = under-voltage, 4 = throttled); a `5` in the fifth digit from the right (e.g. `0x50000`) means it *happened since boot* and stays until reboot |
+
+All three refreshed every 2 seconds (Ctrl+C to stop):
+
+```bash
+watch -n 2 'vcgencmd measure_temp; vcgencmd measure_clock arm; vcgencmd get_throttled'
+```
+
+Inference FPS is read from the video overlay in the web page.
+
+### Test 1 — System panel, test mode (6 Oct 2026)
+
+**Setup:** `python main.py --no-arduino`, P165-B heatsink + fan, Pi powered from a **PC USB-C port**, Wi-Fi.
+
+| Check | Result |
+|---|---|
+| Web page, video stream, object detection table | ✅ Working |
+| System panel updates every 5 s | ✅ Working |
+| CPU temperature after ~5 min of YOLO | **32 °C** — lower than expected (~45–55 °C) |
+| Wi-Fi signal | **−58 dBm** — good |
+| Power / throttling badge | **UNDER-VOLTAGE** |
+
+**Conclusion:** the panel works and correctly detected that the PC's USB port cannot supply enough current. The low temperature is most likely a side effect: on under-voltage the Pi lowers its CPU clock, so it heats less — and also runs YOLO slower. To be confirmed in Test 2.
+
+### Test 2 — Power supply comparison (7 Oct 2026, run B done, run A pending)
+
+Goal: measure how under-voltage affects the CPU and detection speed.
+
+Run the same session twice, **10 minutes each**, with `python main.py --no-arduino` and the same objects in front of the camera:
+
+- **A:** Pi powered from the PC USB-C port
+- **B:** Pi powered from a proper 5.1 V / 3 A supply
+
+While it runs, record the values with the [monitoring commands](#monitoring-commands) at the start, at 5 min and at 10 min:
+
+| Run | Time | Temp (°C) | CPU clock (MHz) | `get_throttled` | Inference FPS (video overlay) | Panel badge |
+|---|---|---|---|---|---|---|
+| A — PC USB-C | 0 min | | | | | |
+| A — PC USB-C | 5 min | | | | | |
+| A — PC USB-C | 10 min | | | | | |
+| B — 5.1 V / 3 A | during run | 36–38 (37.4 at check) | 1500 | `0x0` | **2.3–2.4** | OK |
+
+Run B repeated after re-exporting the model at 320 (code unchanged): **6–9 FPS**.
+
+Run B: no objects in front of the camera (YOLO still processes every frame, so the CPU load is similar). Wi-Fi −58 dBm.
+
+**Expected:** run A shows under-voltage, a reduced clock and lower FPS; run B shows `0x0`, 1.5 GHz, higher temperature and higher FPS.
+
+**Result of run B:** power and temperature are fine — no throttling, full 1.5 GHz clock, 36–38 °C. But inference FPS was only **2.3–2.4**, far below the expected 4–8. With full power available, the low FPS is not a power problem: the NCNN model had been exported at the default size **640**, so every 320×240 frame was upscaled back to 640 and the 320×240 optimisation had no effect (problem 14). After re-exporting the model at 320, run B gave **6–9 FPS**. Run A still to do.
+
+The same session also showed two other errors in the log — a Flask / Flask-SocketIO incompatibility (problem 15) and tracker warnings (problem 16).
+
+### Test 3 — Cooling comparison (planned, after Test 2)
+
+With the proper supply: 10 minutes of YOLO **with the fan unplugged**, then 10 minutes **with the fan on**, recording the same values. Shows whether the P165-B keeps the Pi below the 80 °C throttling limit.
 
 ---
 
@@ -322,7 +439,10 @@ Legend: ✅ done · 🔄 needs testing on hardware · ⬜ to do
 - 🔄 Measure inference / stream FPS on the Pi
 - ⬜ Compare YOLO11n vs YOLOv8n vs YOLOv5n (NCNN)
 - ⬜ Test detection at night (IR mode)
-- ⬜ Show inference FPS and CPU temperature in the UI
+- ✅ System panel: CPU temperature, throttling / under-voltage, Wi-Fi signal (Test 1)
+- ✅ Test mode without the Arduino (`--no-arduino`) (Test 1)
+- ⬜ Test 2 — power supply comparison (PC USB vs 5.1 V / 3 A)
+- ⬜ Test 3 — CPU temperature under continuous YOLO with and without the fan
 
 ### Driving
 - ✅ Manual WASD driving end to end
@@ -366,7 +486,7 @@ source venv/bin/activate
 pip install flask flask-socketio ultralytics opencv-python pyserial smbus2
 
 # 3. YOLO model (NCNN), placed in Pi/testing/ so that v2 finds it at ../yolo11n_ncnn_model
-yolo export model=yolo11n.pt format=ncnn
+yolo export model=yolo11n.pt format=ncnn imgsz=320   # must match _INFER_SIZE in camera.py
 
 # 4. Check devices
 ls /dev/ttyACM*              # Arduino → /dev/ttyACM0
@@ -376,6 +496,7 @@ libcamera-hello --list-cameras
 # 5. Run
 cd Pi/testing/v2
 python main.py               # → http://<pi-ip>:5000
+python main.py --no-arduino  # test mode: camera, detection, system panel only
 ```
 
 ### Arduino
@@ -400,7 +521,7 @@ Pathfinder_ROV/
         │   ├── Arduino/              ← component test sketches (motors, sensors, serial)
         │   └── *.py                  ← camera, streaming, detection, serial tests
         └── v2/                       ← current system
-            ├── main.py  app.py  camera.py  arduino.py  battery.py
+            ├── main.py  app.py  camera.py  arduino.py  battery.py  system.py
             ├── templates/index.html
             ├── static/main.js
             └── Arduino/TESTING_PYTHON_MOTORS/
