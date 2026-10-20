@@ -126,7 +126,10 @@ Fritzing sources and PNGs are in [`schemas/`](schemas/).
 - The Pi 4B running YOLO + camera + IR LEDs can draw close to **3 A at 5 V**. The X728 supports up to 5 A.
 - **Never power the Pi from a PC USB port.** PC ports give about 0.5–1.5 A; under load the Pi reports under-voltage and slows its CPU (see problem #13). Use a 5.1 V / 3 A supply; the X728's USB-C input also needs ≥ 3 A. Long under-voltage sessions can also corrupt the SD card.
 - The **motors are on a separate supply** (AA pack via the L298N). Sharing a supply with the Pi would cause brown-outs and reboots every time the motors start.
-- The X728 requires 18650 cells **without** built-in protection circuits (per Geekworm); use reputable brands (Samsung, LG, Sony/Murata, Molicel).
+- The X728 requires 18650 cells **without** built-in protection circuits (per Geekworm); use reputable brands (Panasonic, Samsung, LG, Sony/Murata, Molicel).
+- Chosen cells: **2 × Panasonic NCR18650B** (unprotected, flat top, no solder tabs). From the Panasonic datasheet: 3.6 V nominal, 3350 mAh typical (3200 min), 18.5 × 65.3 mm max, 47.5 g max, discharge tested up to 6.5 A — the ROV needs roughly 2–2.5 A per cell under full YOLO load.
+- **Charge only between +10 °C and +45 °C** (discharge is fine from −20 °C to +60 °C): the ROV can run in the cold, but charge it indoors.
+- Fake check on arrival: genuine cells weigh about 46–47.5 g; a much lighter cell is a fake.
 
 ---
 
@@ -431,7 +434,7 @@ Legend: ✅ done · 🔄 needs testing on hardware · ⬜ to do
 - ✅ Pi ↔ Arduino USB serial
 - 🔄 Solder and install the new **GY-530** sensors (wire XSHUT)
 - 🔄 Mount **P165-B** heatsink + fan together with UPS and camera
-- ⬜ Buy 18650 cells and install the **X728** UPS
+- ⬜ Buy 18650 cells (2 × Panasonic NCR18650B chosen) and install the **X728** UPS
 - ⬜ Final chassis assembly
 
 ### Camera & detection
