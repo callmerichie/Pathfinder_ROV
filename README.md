@@ -15,16 +15,17 @@ A land-based ROV (Remotely Operated Vehicle) driven from a web browser. A Raspbe
 5. [Communication protocols](#communication-protocols)
 6. [Web interface](#web-interface)
 7. [System monitoring](#system-monitoring)
-8. [Object tracking (autonomous mode)](#object-tracking-autonomous-mode)
-9. [Development history](#development-history)
-10. [Problems encountered & solutions](#problems-encountered--solutions)
-11. [Design considerations](#design-considerations)
-12. [Known issues & limitations](#known-issues--limitations)
-13. [Test log](#test-log)
-14. [Project status & roadmap](#project-status--roadmap)
-15. [Setup & running](#setup--running)
-16. [Repository structure](#repository-structure)
-17. [References](#references)
+8. [Power management (X728 UPS)](#power-management-x728-ups)
+9. [Object tracking (autonomous mode)](#object-tracking-autonomous-mode)
+10. [Development history](#development-history)
+11. [Problems encountered & solutions](#problems-encountered--solutions)
+12. [Design considerations](#design-considerations)
+13. [Known issues & limitations](#known-issues--limitations)
+14. [Test log](#test-log)
+15. [Project status & roadmap](#project-status--roadmap)
+16. [Setup & running](#setup--running)
+17. [Repository structure](#repository-structure)
+18. [References](#references)
 
 ---
 
@@ -82,7 +83,7 @@ flowchart TD
 | Main computer | **Raspberry Pi 4B** | Web server, camera, YOLO inference | |
 | Camera | **5MP OV5647 motorised IR-CUT** (Arducam-style, [The Pi Hut](https://thepihut.com/products/5mp-motorised-ir-cut-ov5647-camera-for-raspberry-pi)) | Live video + object detection | 85° FOV, 2.25 mm manual-focus M12 lens, 2 IR LED boards. The IR-cut filter switches **automatically** via an on-board light sensor (no software control on current Raspberry Pi OS) |
 | Cooling | **Geekworm P165-B** 11 mm aluminium heatsink + 3010 fan | Keeps the CPU below thermal-throttling during YOLO | Assembly is tight together with the UPS and the CSI ribbon cable |
-| UPS / Pi power | **Geekworm X728** ([product page](https://geekworm.com/products/x728)) | Battery backup for the Pi, battery monitoring | 18650 cells, 5.1 V / up to 5 A output, MAX17043 fuel gauge on I2C (`0x36`), DS1307 RTC, AC-loss detection on GPIO6. **Batteries not purchased yet** |
+| UPS / Pi power | **Geekworm X728** ([product page](https://geekworm.com/products/x728)) | Battery backup for the Pi, battery monitoring | 18650 cells, 5.1 V / up to 5 A output, MAX17043 fuel gauge on I2C (`0x36`), DS1307 RTC, AC-loss detection on GPIO6. Board revision **V2.5**, 2 × Panasonic NCR18650B installed; first runtime test: about **2 h** with YOLO running |
 | Microcontroller | **Arduino** (Uno-class) | Motors + distance sensors | USB serial to the Pi (`/dev/ttyACM0`) |
 | Motor driver | **L298N** | Drives the two DC motors | |
 | Motors | 2× DC motors | Locomotion | Powered by 4× AA NiMH (1.2 V each → 4.8 V), separate from the Pi |
@@ -158,7 +159,7 @@ The current code lives in [`Pi/testing/v2/`](Pi/testing/v2/). Older prototypes a
 | `app.py` | Flask routes and Socket.IO events. Knows nothing about hardware — it only reads/writes shared state. |
 | `camera.py` | Camera init, model loading, `CameraStream` class (three threads). |
 | `arduino.py` | `driving_rov()` background task: sends `keys[]` to the Arduino, parses sensor lines, emits `sensor_update`. |
-| `battery.py` | `battery_task()`: reads the MAX17043 every 5 s and emits `battery_update`. |
+| `battery.py` | `battery_task()`: reads the MAX17043 and the AC-loss pin every 5 s, emits `battery_update`; on critical battery stops the motors and shuts the Pi down (see [Power management](#power-management-x728-ups)). |
 | `system.py` | `system_task()`: reads Pi health (CPU temperature, throttling / under-voltage, Wi-Fi signal) every 5 s and emits `system_update`. |
 | `templates/index.html` | Single-page UI. |
 | `static/main.js` | Keyboard handling, Socket.IO client, object table, sensor and battery panels. |
@@ -202,7 +203,8 @@ One text line every 200 ms: `D:<s1>,<s2>\n` in millimetres, `-1` = out of range.
 |---|---|---|---|
 | Browser → Pi | WebSocket | `manual_movement` | `{w, a, s, d}` booleans, every 50 ms (not sent while tracking) |
 | Pi → Browser | WebSocket | `sensor_update` | `{s1, s2}` mm |
-| Pi → Browser | WebSocket | `battery_update` | `{voltage, percent}` (null if unreadable), every 5 s |
+| Pi → Browser | WebSocket | `battery_update` | `{voltage, percent, on_battery, status}` (null if unreadable; `status` = `ok` / `low` / `critical`), every 5 s |
+| Pi → Browser | WebSocket | `battery_shutdown` | `{voltage, delay}` — critical battery, Pi shuts down in `delay` seconds |
 | Pi → Browser | WebSocket | `system_update` | `{temp_c, under_voltage, throttled, under_voltage_occurred, throttled_occurred, wifi_dbm}` (null if unreadable), every 5 s |
 | Browser → Pi | HTTP GET | `/video_feed` | MJPEG stream |
 | Browser → Pi | HTTP GET | `/get_list_objects` | JSON object list, polled every 1 s |
@@ -260,7 +262,7 @@ All three readings use files or tools already on Raspberry Pi OS — no extra Py
 | Inference FPS | Already shown on the video overlay and in the object table |
 | CPU usage % | Nice to have; would need `psutil`. Not added for now |
 | RAM usage | Low value — model + stream fit comfortably in the Pi 4's memory |
-| Power source (mains / battery) | Planned together with the X728 work (AC-loss signal on GPIO6) |
+| Power source (mains / battery) | Done: shown in the Battery panel as "on battery" / "charging" (X728 AC-loss signal on GPIO6) |
 
 ### Test mode (without the Arduino)
 
@@ -271,6 +273,35 @@ python main.py --no-arduino
 ```
 
 The Arduino is not opened and the driving/sensor task is not started. The web page is the same: video, object table, Battery and System panels work normally; the distance sensor bars stay at "---" and WASD keys have no effect.
+
+---
+
+## Power management (X728 UPS)
+
+The X728 powers the Pi, charges the cells and switches to battery by itself — no software is needed for that. Software adds monitoring, a clean shutdown with the power button, and an automatic shutdown before the cells run flat (a sudden power loss can corrupt the SD card).
+
+The board talks to the Pi over I2C and four GPIO pins:
+
+| Signal | Pin | Direction | Meaning |
+|---|---|---|---|
+| Fuel gauge MAX17043 | I2C bus 1, `0x36` | X728 → Pi | Cell voltage and charge % |
+| AC loss | GPIO6 | X728 → Pi | High = adapter unplugged (the red **AC FAIL** LED is on), low = charging |
+| Shutdown request | GPIO5 | X728 → Pi | Raised when the power button is pressed |
+| Boot OK | GPIO12 | Pi → X728 | Held high while the Pi runs; when it drops after a halt, the X728 cuts power |
+| Software button | GPIO26 | Pi → X728 | A 2 s pulse acts like pressing the power button |
+
+**Power button** — `Pi/x728/xPWR.sh`, run at boot by the systemd service `x728-pwr.service` (Geekworm's script, ported to libgpiod v2). Short press (0.2–0.6 s) → reboot; hold → clean shutdown, then the X728 cuts power. ✅ Verified on the Pi.
+
+**Software shutdown** — `Pi/x728/xSoft.sh 0 26` pulses GPIO26: the X728 asks the Pi to halt (through `xPWR.sh`) and then cuts the battery, so a halted Pi doesn't keep draining the cells. Works as a normal user (no `sudo`).
+
+**Low battery** — in `battery.py`, while on battery:
+
+| Cell voltage | Action |
+|---|---|
+| ≤ 3.50 V | Yellow "LOW BATTERY" banner in the UI |
+| ≤ 3.30 V for 3 readings in a row (15 s, ignores short dips under load) | Motors stopped, red banner with a 10 s countdown, then `xSoft.sh`; falls back to `sudo shutdown -h now` if the X728 doesn't react |
+
+Voltage is used instead of the charge %, because the MAX17043 percentage needs some cycles to become accurate. Readings below 2.5 V are treated as I2C glitches. While charging, a low reading never triggers a shutdown (a nearly empty cell reads low for a moment right after plugging in). ✅ Verified on the Pi with temporarily raised thresholds: blocked while charging, shut down and powered off on battery.
 
 ---
 
@@ -300,7 +331,7 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 | Mar 2026 | **Manual driving working end to end** (browser → Pi → Arduino → motors). |
 | Apr 2026 | **v2 refactor**: monolithic script split into `main/app/camera/arduino`; three-thread camera pipeline; binary 4-byte serial protocol; distance-sensor panel and obstacle banner. v1 moved to `Pi/testing/v1/`. |
 | May 2026 | Battery panel (UPS fuel gauge), tracking Phase 1 (visual), sensor-emit fix. |
-| Oct 2026 | Hardware upgrades: Geekworm X728 UPS, P165-B heatsink + fan, new GY-530 VL53L0X boards. Documentation rewrite. System monitoring panel and Arduino-free test mode; first test revealed under-voltage when powered from a PC USB port. |
+| Oct 2026 | Hardware upgrades: Geekworm X728 UPS, P165-B heatsink + fan, new GY-530 VL53L0X boards. Documentation rewrite. System monitoring panel and Arduino-free test mode; first test revealed under-voltage when powered from a PC USB port. 18650 cells installed (≈ 2 h runtime); X728 power button daemon, power-source display and automatic low-battery shutdown. |
 
 ---
 
@@ -318,13 +349,14 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 | 8 | Fragile text protocol (v1) | String parsing on the Arduino | Binary 4-byte `[W,A,S,D]` protocol (v2). **The v1 sketch must not be flashed with v2 code** |
 | 9 | Baud-rate mismatches in test sketches | Some sketches used 9600 | Everything standardised on **115200** |
 | 10 | Socket flooded with sensor events | `sensor_update` emitted for every parsed line | Parse all pending lines, emit once per loop |
-| 11 | Battery always "N/A" | The old **X703 UPS has no I2C fuel gauge**; on one attempt the address showed as `UU` (claimed by a kernel driver) | Replaced with the **X728** (MAX17043 at `0x36`). `battery.py` must be pointed at I2C bus 1 — see roadmap |
+| 11 | Battery always "N/A" | The old **X703 UPS has no I2C fuel gauge**; on one attempt the address showed as `UU` (claimed by a kernel driver) | Replaced with the **X728** (MAX17043 at `0x36`) and pointed `battery.py` at **I2C bus 1** (it opened bus 0, which is not the header I2C on the Pi 4B). ✅ Verified on the Pi |
 | 12 | Tight mechanical fit (heatsink + UPS + CSI ribbon) | P165-B is 11 mm tall | Use a 2×20 header extension if boards touch; avoid sharp bends in the ribbon (causes intermittent "camera not detected") |
 | 13 | System panel reported **UNDER-VOLTAGE**, and CPU temperature stayed at only 32 °C with YOLO running | Pi powered from a **PC USB-C port**, which gives about 0.5–1.5 A; the Pi 4 needs 3 A at 5.1 V. On under-voltage the firmware lowers the CPU clock, so the CPU runs cooler and YOLO slower | Use a proper 5.1 V / 3 A supply (official Raspberry Pi PSU or equivalent). Comparison test planned — see [Test log](#test-log) |
 | 14 | Inference only **2.3–2.4 FPS** even with full power (1.5 GHz, no throttling) | The NCNN model had been exported with the default size **640** (`yolo export ... format=ncnn` without `imgsz`). An exported model runs at its export size, so the 320×240 frame was upscaled back to 640 and problem 3's optimisation did nothing | Re-exported the model at 320 (`yolo export model=yolo11n.pt format=ncnn imgsz=320`; `metadata.yaml` now shows `imgsz: [320, 320]`) → **6–9 FPS** (≈ 3×). `track()` also gets `imgsz=320` explicitly, so code and model stay in sync |
 | 15 | `AttributeError: property 'session' of 'RequestContext' object has no setter` on every Socket.IO event | Flask is loaded from the **system packages** (`/usr/lib/python3/dist-packages`, installed with apt — the venv uses system site-packages because picamera2 needs them), while Flask-SocketIO comes from pip in the venv. The two are updated separately and drifted to incompatible versions; handlers never run, so WASD and target selection silently fail (video and system panel still work) | Upgraded `flask-socketio`, `python-socketio`, `python-engineio` (`pip install --upgrade ...`) — error gone. ✅ Verified on the Pi |
 | 16 | `WARNING ⚠️ not enough matching points` flooding the log | Default tracker **BoT-SORT** estimates camera motion by matching feature points between frames; plain scenes have too few | Switched to **ByteTrack** (`tracker="bytetrack.yaml"`): no camera-motion step, lighter on the CPU. ✅ Verified on the Pi: warning gone, FPS unchanged (6–9) |
 | 17 | `ConnectionError` traceback from `engineio/async_drivers/_websocket_wsgi.py` | Printed when the browser page is **reloaded**: the old WebSocket closes and Flask's development server logs it as an error | Harmless — the page reconnects and everything keeps working. Ignored |
+| 18 | X728 button service used about **4–5 % of a CPU core** while idle | Geekworm's `xPWR.sh` polls the button pin 5 times a second, starting a new `gpioget` process each time | Rewrote it event-driven with `gpiomon`: the kernel wakes the script only when the pin changes → 31 ms of CPU in 2 min (≈ 150× less). ✅ Verified on the Pi, button still works |
 
 ---
 
@@ -345,7 +377,6 @@ Goal: after the operator clicks **Track**, the ROV turns so the selected object 
 ## Known issues & limitations
 
 - **Obstacle stop also blocks reversing.** The Arduino stops the motors whenever a sensor reads ≤ 50 mm, *including* when the user presses `S`. Since both sensors face forward, backing away from an obstacle should be allowed.
-- **Battery reading uses the wrong I2C bus.** `battery.py` opens `SMBus(0)`; on the Pi 4B the header I2C (where the X728 lives) is **bus 1**.
 - **Binary protocol has no framing.** If a byte is ever lost, the 4-byte commands can go out of alignment. A start byte or checksum would make it robust.
 - **Turning is a one-wheel pivot** at a fixed PWM (115). Speed is not adjustable from the UI; proportional control needs a protocol upgrade.
 - **Inference FPS: 6–9** after re-exporting the model at 320 (was 2.3–2.4, problem 14). Stream FPS not measured separately yet.
@@ -434,7 +465,7 @@ Legend: ✅ done · 🔄 needs testing on hardware · ⬜ to do
 - ✅ Pi ↔ Arduino USB serial
 - 🔄 Solder and install the new **GY-530** sensors (wire XSHUT)
 - 🔄 Mount **P165-B** heatsink + fan together with UPS and camera
-- ⬜ Buy 18650 cells (2 × Panasonic NCR18650B chosen) and install the **X728** UPS
+- ✅ Install the **X728** UPS with 2 × Panasonic NCR18650B (≈ 2 h runtime)
 - ⬜ Final chassis assembly
 
 ### Camera & detection
@@ -464,8 +495,11 @@ Legend: ✅ done · 🔄 needs testing on hardware · ⬜ to do
 
 ### Power
 - ✅ Battery panel in the UI
-- ⬜ Point `battery.py` to I2C bus 1, verify with `i2cdetect -y 1`
-- ⬜ Safe shutdown on low battery / AC loss (X728 GPIO6)
+- ✅ Point `battery.py` to I2C bus 1, verify with `i2cdetect -y 1`
+- ✅ Power button daemon (`xPWR.sh`, event-driven)
+- ✅ Power source in the UI (X728 GPIO6)
+- ✅ Automatic safe shutdown on low battery
+- ⬜ Full discharge test: runtime and voltage curve for the [Test log](#test-log)
 
 ### Networking
 - ✅ Local network access
@@ -486,7 +520,7 @@ sudo apt install -y python3-picamera2 i2c-tools
 # 2. Virtual environment (with system packages, so Picamera2 is visible)
 python3 -m venv --system-site-packages venv
 source venv/bin/activate
-pip install flask flask-socketio ultralytics opencv-python pyserial smbus2
+pip install flask flask-socketio ultralytics opencv-python pyserial smbus2 gpiozero lgpio
 
 # 3. YOLO model (NCNN), placed in Pi/testing/ so that v2 finds it at ../yolo11n_ncnn_model
 yolo export model=yolo11n.pt format=ncnn imgsz=320   # must match _INFER_SIZE in camera.py
@@ -500,6 +534,18 @@ libcamera-hello --list-cameras
 cd Pi/testing/v2
 python main.py               # → http://<pi-ip>:5000
 python main.py --no-arduino  # test mode: camera, detection, system panel only
+```
+
+### X728 UPS scripts (requires libgpiod v2: `gpioset --version`)
+
+```bash
+cd Pi/x728
+sudo cp xPWR.sh xSoft.sh /usr/local/bin/
+sudo chmod +x /usr/local/bin/xPWR.sh /usr/local/bin/xSoft.sh
+sudo cp x728-pwr.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now x728-pwr
+systemctl status x728-pwr    # active (running), with gpioset and gpiomon listed
 ```
 
 ### Arduino
@@ -519,6 +565,7 @@ Pathfinder_ROV/
 ├── picamera2-manual.pdf
 ├── schemas/                          ← Fritzing wiring diagrams
 └── Pi/
+    ├── x728/                         ← UPS power button service + software shutdown
     └── testing/
         ├── v1/                       ← early prototypes (text protocol, monolithic server)
         │   ├── Arduino/              ← component test sketches (motors, sensors, serial)

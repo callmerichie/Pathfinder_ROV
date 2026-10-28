@@ -40,6 +40,6 @@ if __name__ == "__main__":
         socketio.start_background_task(driving_rov, arduino, keys, keys_lock, socketio, sensor_distances)
     else:
         print("Test mode: Arduino disabled (no motors, no distance sensors)")
-    socketio.start_background_task(battery_task, socketio)
+    socketio.start_background_task(battery_task, socketio, keys, keys_lock)
     socketio.start_background_task(system_task, socketio)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)

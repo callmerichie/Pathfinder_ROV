@@ -126,7 +126,22 @@ socket.on("battery_update", (data) => {
     text.className += " text-success";
   }
 
-  voltage.textContent = data.voltage !== null ? `${data.voltage} V` : "";
+  const source = { true: " · on battery", false: " · charging" }[data.on_battery] ?? "";
+  voltage.textContent = data.voltage !== null ? `${data.voltage} V${source}` : "";
+
+  const alert = document.getElementById("battery-alert");
+  if (data.status === "low" || data.status === "critical") {
+    alert.className   = "alert alert-warning mb-3";
+    alert.textContent = `⚠ LOW BATTERY (${data.voltage} V) — bring the ROV back and plug in the charger`;
+  } else {
+    alert.className   = "alert d-none mb-3";
+  }
+});
+
+socket.on("battery_shutdown", (data) => {
+  const alert = document.getElementById("battery-alert");
+  alert.className   = "alert alert-danger mb-3";
+  alert.textContent = `⛔ BATTERY CRITICAL (${data.voltage} V) — motors stopped, Pi shutting down in ${data.delay} s`;
 });
 
 
